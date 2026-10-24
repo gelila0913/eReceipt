@@ -2,6 +2,23 @@
 
 **eReceipt** is a digital receipt management system designed to modernize receipt issuance, improve transaction transparency, and simplify merchant registration and tax administration. The platform aims to reduce reliance on paper receipts while making receipts easier to access, verify, and manage.
 
+---
+
+## 🚀 Live Releases & Production Deployments
+
+The system is fully containerized and hosted live on **Microsoft Azure Container Apps** with automated GitHub Actions CI/CD:
+
+| Portal | Live Release URL | Description | Default Credentials |
+|---|---|---|---|
+| 👑 **Admin Portal** | [**tinyurl.com/admin-erecipt**](https://tinyurl.com/admin-erecipt) | Tax Authority & Revenue Officer Portal for reviewing merchant applications, approving licenses, and auditing tax invoices | `officer@revenue.gov.et`<br>`Admin#2026` |
+| 🛒 **Merchant Portal** | [**tinyurl.com/eReciptL**](https://tinyurl.com/eReciptL) | Business Workspace for merchant onboarding, sales registration, product catalogs, and POS digital receipt issuance | Registered Merchant TIN & Password |
+| 🔍 **Public QR Verification** | [**Verify Receipt**](https://ereceipt-frontend.salmonwater-89ba5a67.southafricanorth.azurecontainerapps.io/verify) | Public scanner to view, authenticate, and verify cleared tax receipts | Any scannable receipt QR code |
+
+> [!NOTE]
+> All services run on Docker containers orchestrated via Nginx and Express on Azure Container Apps, backed by Azure Database for PostgreSQL Flexible Server.
+
+---
+
 ## Team Members
 
 Add the names of the project members below.
@@ -271,17 +288,15 @@ The merchant interface is being designed in Figma, with the administrator interf
 Planned development milestones:
 
 - [x] Establish the project concept and core requirements.
-- [x] Begin merchant-side UI/UX design in Figma.
-- [ ] Design the admin login and dashboard.
-- [ ] Design merchant application review and approval screens.
-- [ ] Implement authentication and role-based access control.
-- [ ] Implement merchant registration and approval workflows.
-- [ ] Implement digital receipt generation and storage.
-- [ ] Implement QR-code-based receipt verification.
-- [ ] Test security, validation, and end-to-end workflows.
-- [ ] Deploy the application.
-
-*The checklist describes project progress and planned work; it does not imply that unfinished features are implemented.*
+- [x] Design merchant-side and admin-side UI/UX.
+- [x] Design the admin login, overview, and directory dashboard.
+- [x] Design merchant application review, license inspection, and approval workflows.
+- [x] Implement authentication and role-based access control.
+- [x] Implement merchant registration, email OTP verification, and profile management.
+- [x] Implement digital receipt generation, thermal print previews, and persistent storage.
+- [x] Implement QR-code-based receipt verification with scannable clear URL.
+- [x] Test security, validation, idempotency, and end-to-end workflows.
+- [x] Containerize with Docker and deploy to Microsoft Azure with automated CI/CD.
 
 ## Future Improvements
 
