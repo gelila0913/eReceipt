@@ -1,11 +1,20 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { Logo } from '../../../../components/ui/Logo/Logo';
-import { saveStoredMerchantProfile } from '../../../merchant-registration/profileStorage';
+import {
+  saveStoredMerchantProfile,
+  getStoredMerchantProfile,
+} from '../../../merchant-registration/profileStorage';
 import { syncMerchantReceipts } from '../../../../services/merchantDataStore';
 import styles from './SigninForm.module.css';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+import { API_BASE_URL } from '../../../../config/api';
+
+const RESET_STEP_NONE = 0;
+const RESET_STEP_EMAIL = 1;
+const RESET_STEP_OTP = 2;
+const RESET_STEP_NEW_PASSWORD = 3;
+const RESET_STEP_DONE = 4;
 
 export interface AuthenticatedMerchant {
   id: string;
@@ -48,6 +57,99 @@ export const LoginForm: React.FC<SigninFormProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [tinError, setTinError] = useState('');
   const [authError, setAuthError] = useState<string | null>(null);
+
+  // Password reset flow
+  const [resetStep, setResetStep] = useState(RESET_STEP_NONE);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetOtp, setResetOtp] = useState('');
+  const [resetNewPassword, setResetNewPassword] = useState('');
+  const [resetConfirmPassword, setResetConfirmPassword] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
+  const [resetSuccess, setResetSuccess] = useState<string | null>(null);
+
+  const handleForgotPassword = () => setResetStep(RESET_STEP_EMAIL);
+  const handleCloseReset = () => {
+    setResetStep(RESET_STEP_NONE);
+    setResetEmail('');
+    setResetOtp('');
+    setResetNewPassword('');
+    setResetConfirmPassword('');
+    setResetError(null);
+    setResetSuccess(null);
+  };
+
+  const handleRequestReset = async () => {
+    if (!resetEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(resetEmail.trim())) {
+      setResetError('Please enter a valid email address.');
+      return;
+    }
+    setResetLoading(true);
+    setResetError(null);
+    try {
+      await axios.post(`${API_BASE_URL}/api/auth/merchant/password-reset/request`, {
+        email: resetEmail.trim().toLowerCase(),
+      });
+      setResetSuccess('A verification code has been sent to your email.');
+      setResetStep(RESET_STEP_OTP);
+    } catch (err: any) {
+      // Always show success message for security (don't reveal if email exists)
+      setResetSuccess('If that email is registered, a verification code has been sent.');
+      setResetStep(RESET_STEP_OTP);
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!resetOtp.trim() || resetOtp.trim().length < 4) {
+      setResetError('Please enter the verification code from your email.');
+      return;
+    }
+    setResetLoading(true);
+    setResetError(null);
+    try {
+      await axios.post(`${API_BASE_URL}/api/otp/verify`, {
+        email: resetEmail.trim().toLowerCase(),
+        code: resetOtp.trim(),
+        purpose: 'merchant_password_reset',
+      });
+      setResetStep(RESET_STEP_NEW_PASSWORD);
+      setResetError(null);
+    } catch (err: any) {
+      setResetError(
+        err.response?.data?.message || err.response?.data?.error || 'Invalid or expired code. Please try again.'
+      );
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  const handleConfirmReset = async () => {
+    if (!resetNewPassword || resetNewPassword.length < 6) {
+      setResetError('Password must be at least 6 characters.');
+      return;
+    }
+    if (resetNewPassword !== resetConfirmPassword) {
+      setResetError('Passwords do not match.');
+      return;
+    }
+    setResetLoading(true);
+    setResetError(null);
+    try {
+      await axios.post(`${API_BASE_URL}/api/auth/merchant/password-reset/confirm`, {
+        email: resetEmail.trim().toLowerCase(),
+        password: resetNewPassword,
+      });
+      setResetStep(RESET_STEP_DONE);
+    } catch (err: any) {
+      setResetError(
+        err.response?.data?.message || err.response?.data?.error || 'Failed to reset password. Please try again.'
+      );
+    } finally {
+      setResetLoading(false);
+    }
+  };
 
   const handleTinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/\D/g, ''); // only allow digits
@@ -95,24 +197,40 @@ export const LoginForm: React.FC<SigninFormProps> = ({
           sessionStorage.setItem('ereceipt_merchant', JSON.stringify(merchant));
         }
 
-        // Set authoritative active profile for this merchant to ensure isolation
+        // Set authoritative active profile for this merchant to ensure isolation and retain registered phone number
+        const currentStored = getStoredMerchantProfile();
+        const resolvedPhone =
+          merchant.phoneNumber ||
+          currentStored.phoneNumber ||
+          localStorage.getItem(`ereceipt_phone_${merchant.tin}`) ||
+          '';
+        const resolvedEmail =
+          merchant.email ||
+          currentStored.email ||
+          '';
+
+        if (resolvedPhone && merchant.tin) {
+          localStorage.setItem(`ereceipt_phone_${merchant.tin}`, resolvedPhone);
+        }
+
         saveStoredMerchantProfile({
-          fullName: merchant.fullName || merchant.businessName || '',
-          phoneNumber: merchant.phoneNumber || '',
-          sellerLegalName: merchant.businessName || merchant.sellerLegalName || '',
-          tradeName: merchant.tradeName || merchant.businessName || '',
+          fullName: merchant.fullName || currentStored.fullName || merchant.businessName || '',
+          phoneNumber: resolvedPhone,
+          email: resolvedEmail,
+          sellerLegalName: merchant.businessName || merchant.sellerLegalName || currentStored.sellerLegalName || '',
+          tradeName: merchant.tradeName || merchant.businessName || currentStored.tradeName || '',
           tin: merchant.tin,
-          businessLicenseNumber: merchant.businessLicenseNumber || '',
-          uploadedFileName: '',
-          uploadedFileSize: '',
-          city: merchant.city || '',
-          subCity: merchant.subCity || '',
-          buildingName: merchant.buildingName || '',
-          floor: merchant.floor || '',
-          gpsLocation: merchant.gpsLocation || '',
-          referenceNumber: merchant.referenceNumber || '',
-          status: merchant.status || 'Approved',
-          registeredAt: merchant.registeredAt || new Date().toISOString(),
+          businessLicenseNumber: merchant.businessLicenseNumber || currentStored.businessLicenseNumber || '',
+          uploadedFileName: currentStored.uploadedFileName || '',
+          uploadedFileSize: currentStored.uploadedFileSize || '',
+          city: merchant.city || currentStored.city || '',
+          subCity: merchant.subCity || currentStored.subCity || '',
+          buildingName: merchant.buildingName || currentStored.buildingName || '',
+          floor: merchant.floor || currentStored.floor || '',
+          gpsLocation: merchant.gpsLocation || currentStored.gpsLocation || '',
+          referenceNumber: merchant.referenceNumber || currentStored.referenceNumber || '',
+          status: merchant.status || currentStored.status || 'Approved',
+          registeredAt: merchant.registeredAt || currentStored.registeredAt || new Date().toISOString(),
         });
 
         // Sync real receipts from backend for this merchant (and ONLY this merchant)
@@ -270,9 +388,14 @@ export const LoginForm: React.FC<SigninFormProps> = ({
                 />
                 <span>Remember me</span>
               </label>
-              <a href="#forgot-password" className={styles.forgotLink}>
+              <button
+                type="button"
+                onClick={handleForgotPassword}
+                className={styles.forgotLink}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, font: 'inherit' }}
+              >
                 Forgot password?
-              </a>
+              </button>
             </div>
 
             {/* Sign In CTA */}
@@ -333,6 +456,133 @@ export const LoginForm: React.FC<SigninFormProps> = ({
             Your information is used only to operate and secure your account.
           </div>
         </div>
+
+      {/* ===== Password Reset Modal ===== */}
+      {resetStep !== RESET_STEP_NONE && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999,
+          }}
+          onClick={handleCloseReset}
+        >
+          <div
+            style={{
+              background: '#fff', borderRadius: '14px', padding: '36px 32px', width: '100%',
+              maxWidth: '420px', boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Step: Done */}
+            {resetStep === RESET_STEP_DONE ? (
+              <div style={{ textAlign: 'center' }}>
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#0b8060" strokeWidth="2" style={{ margin: '0 auto 16px auto', display: 'block' }}>
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                <h3 style={{ margin: '0 0 8px 0', color: '#17201B', fontSize: '20px' }}>Password reset!</h3>
+                <p style={{ color: '#526059', marginBottom: '24px' }}>Your password has been updated. Sign in with your new password.</p>
+                <button type="button" onClick={handleCloseReset} className={styles.submitBtn} style={{ width: '100%' }}>Back to Sign In</button>
+              </div>
+            ) : (
+              <>
+                <h3 style={{ margin: '0 0 4px 0', color: '#17201B', fontSize: '20px', fontWeight: 700 }}>
+                  {resetStep === RESET_STEP_EMAIL && 'Reset your password'}
+                  {resetStep === RESET_STEP_OTP && 'Enter verification code'}
+                  {resetStep === RESET_STEP_NEW_PASSWORD && 'Choose a new password'}
+                </h3>
+                <p style={{ color: '#526059', fontSize: '14px', marginBottom: '20px' }}>
+                  {resetStep === RESET_STEP_EMAIL && 'Enter the email address linked to your account.'}
+                  {resetStep === RESET_STEP_OTP && `We sent a code to ${resetEmail}. Check your inbox.`}
+                  {resetStep === RESET_STEP_NEW_PASSWORD && 'Your code was verified. Enter your new password below.'}
+                </p>
+
+                {resetError && (
+                  <div style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: '8px', padding: '10px 14px', marginBottom: '16px', color: '#B91C1C', fontSize: '14px' }}>
+                    {resetError}
+                  </div>
+                )}
+                {resetSuccess && resetStep === RESET_STEP_OTP && (
+                  <div style={{ background: '#F0FDF4', border: '1px solid #86EFAC', borderRadius: '8px', padding: '10px 14px', marginBottom: '16px', color: '#15803D', fontSize: '14px' }}>
+                    {resetSuccess}
+                  </div>
+                )}
+
+                {resetStep === RESET_STEP_EMAIL && (
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, marginBottom: '6px', color: '#17201B' }}>Email address</label>
+                    <input
+                      type="email"
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      placeholder="your@email.com"
+                      style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D9D4', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                )}
+
+                {resetStep === RESET_STEP_OTP && (
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, marginBottom: '6px', color: '#17201B' }}>Verification code</label>
+                    <input
+                      type="text"
+                      value={resetOtp}
+                      onChange={(e) => setResetOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      placeholder="6-digit code"
+                      maxLength={6}
+                      style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D9D4', borderRadius: '8px', fontSize: '22px', textAlign: 'center', letterSpacing: '6px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                )}
+
+                {resetStep === RESET_STEP_NEW_PASSWORD && (
+                  <>
+                    <div style={{ marginBottom: '12px' }}>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, marginBottom: '6px', color: '#17201B' }}>New password</label>
+                      <input
+                        type="password"
+                        value={resetNewPassword}
+                        onChange={(e) => setResetNewPassword(e.target.value)}
+                        placeholder="Minimum 6 characters"
+                        style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D9D4', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, marginBottom: '6px', color: '#17201B' }}>Confirm new password</label>
+                      <input
+                        type="password"
+                        value={resetConfirmPassword}
+                        onChange={(e) => setResetConfirmPassword(e.target.value)}
+                        placeholder="Re-enter new password"
+                        style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D9D4', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                  </>
+                )}
+
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={handleCloseReset}
+                    style={{ flex: 1, padding: '11px', border: '1px solid #D1D9D4', borderRadius: '8px', background: '#fff', color: '#526059', fontWeight: 600, cursor: 'pointer', fontSize: '14px' }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={resetLoading}
+                    onClick={resetStep === RESET_STEP_EMAIL ? handleRequestReset : resetStep === RESET_STEP_OTP ? handleVerifyOtp : handleConfirmReset}
+                    className={styles.submitBtn}
+                    style={{ flex: 1 }}
+                  >
+                    {resetLoading ? 'Please wait...' : resetStep === RESET_STEP_EMAIL ? 'Send code' : resetStep === RESET_STEP_OTP ? 'Verify code' : 'Reset password'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
       </div>
 
       {/* Right Navy Branded Banner */}

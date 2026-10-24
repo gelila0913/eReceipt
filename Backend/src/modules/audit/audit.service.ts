@@ -1,9 +1,40 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { MonthlyFinancialRecord, TaxCalculationResponse, AuditLogEvent } from "./audit.types.js";
 import { AuditFilterInput, ApproveTaxInput } from "./audit.schema.js";
 import { db } from "../../database/db.js";
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const DATA_DIR = path.resolve(__dirname, '../../../data');
+const AUDIT_LOG_FILE = path.join(DATA_DIR, 'merchant-audit-logs.json');
+
+/** Load audit logs from disk */
+function loadAuditLogs(): AuditLogEvent[] {
+  try {
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+    if (fs.existsSync(AUDIT_LOG_FILE)) {
+      return JSON.parse(fs.readFileSync(AUDIT_LOG_FILE, 'utf-8'));
+    }
+  } catch {
+    // ignore parse errors — start fresh
+  }
+  return [];
+}
+
+/** Persist audit logs to disk */
+function saveAuditLogs(logs: AuditLogEvent[]): void {
+  try {
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.writeFileSync(AUDIT_LOG_FILE, JSON.stringify(logs, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('[AuditService] Failed to persist audit logs:', err);
+  }
+}
+
 export class AuditService {
-  private auditLogs: AuditLogEvent[] = [];
+  private auditLogs: AuditLogEvent[] = loadAuditLogs();
 
   /**
    * Filter monthly financial records by date range, strictly scoped by merchant TIN
@@ -71,7 +102,7 @@ export class AuditService {
   }
 
   /**
-   * Approve calculated tax for the period
+   * Approve calculated tax for the period — persisted to disk
    */
   async approveTax(input: ApproveTaxInput, userIdentifier: string) {
     const logEntry: AuditLogEvent = {
@@ -91,6 +122,7 @@ export class AuditService {
     };
 
     this.auditLogs.unshift(logEntry);
+    saveAuditLogs(this.auditLogs);
 
     return {
       success: true,
@@ -101,9 +133,15 @@ export class AuditService {
   }
 
   /**
-   * Get system-wide audit trail logs
+   * Get audit trail logs scoped to the requesting user.
+   * Officers see all; merchants see only their own entries.
    */
-  async getAuditLogs(): Promise<AuditLogEvent[]> {
+  async getAuditLogs(merchantTin?: string): Promise<AuditLogEvent[]> {
+    if (merchantTin) {
+      return this.auditLogs.filter(
+        (log) => log.user === merchantTin || log.resource?.includes(merchantTin)
+      );
+    }
     return this.auditLogs;
   }
 }

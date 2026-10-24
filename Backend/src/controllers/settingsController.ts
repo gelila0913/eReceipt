@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { sendSuccess, sendError } from '../common/apiResponse.js';
+import { applicationStorage } from '../features/merchant-registration/storage.js';
 
 export interface BusinessProfile {
   legalName: string;
@@ -24,13 +25,13 @@ export interface UpdateProfileDTO {
 
 // In-memory profile state matching the frontend BusinessProfileTab specification
 let profile: BusinessProfile = {
-  legalName: 'Abebe Trading PLC',
-  tradeName: 'Abebe Supermarket',
-  tin: '001•••••42',
-  merchantRef: 'AM-2081',
-  businessEmail: 'info@abebetrading.et',
-  phoneNumber: '+251911234567',
-  businessAddress: 'Bole Subcity, Woreda 03, House 412, Addis Ababa, Ethiopia',
+  legalName: '',
+  tradeName: '',
+  tin: '',
+  merchantRef: '',
+  businessEmail: '',
+  phoneNumber: '',
+  businessAddress: '',
   isTinVerified: true,
 };
 
@@ -38,7 +39,55 @@ let profile: BusinessProfile = {
  * GET /api/settings/profile
  * Retrieves the current business profile.
  */
-export const getProfile = (_req: Request, res: Response): void => {
+export const getProfile = (req: Request, res: Response): void => {
+  const tinQuery =
+    (req.query.tin as string) ||
+    (req as any).user?.tin ||
+    (req as any).user?.identifier;
+  if (tinQuery) {
+    const app = applicationStorage.getByTin(tinQuery);
+    if (app) {
+      sendSuccess(
+        res,
+        {
+          legalName: app.sellerLegalName || '',
+          tradeName: app.tradeName || '',
+          tin: app.tin,
+          merchantRef: app.referenceNumber || '',
+          businessEmail: app.email || '',
+          phoneNumber: app.phoneNumber || '',
+          businessAddress: [app.buildingName, app.subCity, app.city].filter(Boolean).join(', '),
+          isTinVerified: true,
+        },
+        'Business profile retrieved successfully'
+      );
+      return;
+    }
+  }
+
+  // Fallback to active registered merchant application if available
+  const allApps = applicationStorage.getAll();
+  const latestApproved = allApps.find((a) => a.status === 'Approved') || allApps[0];
+  if (latestApproved) {
+    sendSuccess(
+      res,
+      {
+        legalName: latestApproved.sellerLegalName || '',
+        tradeName: latestApproved.tradeName || '',
+        tin: latestApproved.tin,
+        merchantRef: latestApproved.referenceNumber || '',
+        businessEmail: latestApproved.email || '',
+        phoneNumber: latestApproved.phoneNumber || '',
+        businessAddress: [latestApproved.buildingName, latestApproved.subCity, latestApproved.city]
+          .filter(Boolean)
+          .join(', '),
+        isTinVerified: true,
+      },
+      'Business profile retrieved successfully'
+    );
+    return;
+  }
+
   sendSuccess(res, { ...profile }, 'Business profile retrieved successfully');
 };
 
@@ -98,6 +147,19 @@ export const updateProfile = (req: Request, res: Response): void => {
   }
   if (body.tradeName !== undefined && typeof body.tradeName === 'string' && body.tradeName.trim().length > 0) {
     profile.tradeName = body.tradeName.trim();
+  }
+
+  const tin =
+    (req.query.tin as string) ||
+    (req as any).user?.tin ||
+    (req as any).user?.identifier;
+  if (tin) {
+    applicationStorage.updateProfileDetails(tin, {
+      phoneNumber: body.phoneNumber,
+      email: body.businessEmail,
+      sellerLegalName: body.legalName,
+      tradeName: body.tradeName,
+    });
   }
 
   sendSuccess(res, { ...profile }, 'Business profile updated successfully');

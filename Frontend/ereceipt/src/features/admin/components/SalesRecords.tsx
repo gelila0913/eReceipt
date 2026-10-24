@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Badge } from './Badge';
+import { API_BASE_URL } from '../../../config/api';
 import styles from './SalesRecords.module.css';
 
 interface LiveReceipt {
@@ -23,7 +24,7 @@ export const SalesRecords: React.FC = () => {
 
   useEffect(() => {
     const fetchReceipts = () => {
-      fetch('http://localhost:5000/api/receipts')
+      fetch(`${API_BASE_URL}/api/receipts`)
         .then((res) => res.json())
         .then((data) => {
           if (data.success && Array.isArray(data.receipts)) {

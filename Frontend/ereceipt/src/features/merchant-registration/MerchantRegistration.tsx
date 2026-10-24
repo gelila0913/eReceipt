@@ -16,6 +16,7 @@ import type {
 } from './types';
 import { initialRegistrationFormData } from './types';
 import { saveStoredMerchantProfile } from './profileStorage';
+import { API_BASE_URL } from '../../config/api';
 import styles from './MerchantRegistration.module.css';
 
 interface MerchantRegistrationProps {
@@ -140,8 +141,13 @@ export const MerchantRegistration: React.FC<MerchantRegistrationProps> = ({
         formPayload.append('uploadedFileSize', formData.uploadedFileSize);
       }
 
-      const res = await fetch('http://localhost:5000/api/registration/submit', {
+      const idempotencyKey = `reg-${formData.tin.trim()}-${formData.email.trim().toLowerCase()}`;
+      const res = await fetch(`${API_BASE_URL}/api/registration/submit`, {
         method: 'POST',
+        headers: {
+          'Idempotency-Key': idempotencyKey,
+          'X-Idempotency-Key': idempotencyKey,
+        },
         body: formPayload,
       });
 
@@ -185,6 +191,31 @@ export const MerchantRegistration: React.FC<MerchantRegistrationProps> = ({
       registeredAt: new Date().toISOString(),
     };
     saveStoredMerchantProfile(profile);
+
+    // Explicitly persist phone number and session so the phone number entered is never lost
+    if (formData.tin && formData.phoneNumber) {
+      window.localStorage.setItem(`ereceipt_phone_${formData.tin}`, formData.phoneNumber);
+    }
+    const registeredSession = {
+      id: assignedRef,
+      role: 'merchant',
+      tin: formData.tin,
+      businessName: formData.sellerLegalName,
+      tradeName: formData.tradeName,
+      fullName: formData.fullName,
+      phoneNumber: formData.phoneNumber,
+      email: formData.email.trim(),
+      businessLicenseNumber: formData.businessLicenseNumber,
+      city: formData.city,
+      subCity: formData.subCity,
+      buildingName: formData.buildingName,
+      floor: formData.floor,
+      gpsLocation: formData.gpsLocation,
+      referenceNumber: assignedRef,
+      status: 'Pending',
+    };
+    window.localStorage.setItem('ereceipt_merchant', JSON.stringify(registeredSession));
+    window.localStorage.setItem('merchant_user', JSON.stringify(registeredSession));
 
     setSubmittedRef(assignedRef);
     setIsSubmitted(true);

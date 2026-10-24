@@ -81,9 +81,7 @@ function generateFiscalClearanceData(date: Date, merchantCode: string = 'MCH-01'
   };
 }
 
-export const ReceiptIssuanceContent: React.FC<ReceiptIssuanceProps> = ({
-  onNavigate: _onNavigate,
-}) => {
+export const ReceiptIssuanceContent: React.FC<ReceiptIssuanceProps> = () => {
   const [documentType, setDocumentType] = useState<DocumentType>(
     'Electronic Tax Invoice (VAT Invoice)'
   );
@@ -116,7 +114,7 @@ export const ReceiptIssuanceContent: React.FC<ReceiptIssuanceProps> = ({
         if (
           parsed.items &&
           parsed.items.some(
-            (it: any) =>
+            (it: { code?: string; name?: string }) =>
               it.code === 'HM-076' ||
               it.code === 'ST-018' ||
               it.name?.includes('Coffee Cup Set') ||
@@ -124,7 +122,6 @@ export const ReceiptIssuanceContent: React.FC<ReceiptIssuanceProps> = ({
           )
         ) {
           window.localStorage.removeItem('ereceipt:pos_draft');
-          setItems([]);
         }
       }
     } catch {
@@ -293,6 +290,8 @@ export const ReceiptIssuanceContent: React.FC<ReceiptIssuanceProps> = ({
       return;
     }
 
+    const idempotencyKey = `idem-${merchantTin}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
     const draftPayload = {
       merchantTin,
       merchantName: profile.tradeName || profile.sellerLegalName || 'Registered Merchant',
@@ -319,11 +318,12 @@ export const ReceiptIssuanceContent: React.FC<ReceiptIssuanceProps> = ({
       total,
       paymentMethod,
       paymentReference,
+      idempotencyKey,
     };
 
     try {
       // Connect to Backend API for official EIMS Clearance & Digital Signature
-      const clearedReceipt = await issueReceiptApi(draftPayload);
+      const clearedReceipt = await issueReceiptApi(draftPayload, idempotencyKey);
       setIsSubmitting(false);
       setIssuedReceipt(clearedReceipt);
 
@@ -336,6 +336,7 @@ export const ReceiptIssuanceContent: React.FC<ReceiptIssuanceProps> = ({
         merchantTradeName: draftPayload.merchantTradeName,
         merchantAddress: draftPayload.merchantAddress,
         cashierName: draftPayload.cashierName,
+        idempotencyKey,
       } as any);
 
       showToast('MoR EIMS Clearance confirmed (HTTP 200). Receipt issued.');
@@ -346,6 +347,7 @@ export const ReceiptIssuanceContent: React.FC<ReceiptIssuanceProps> = ({
       const finalReceipt: IssuedReceipt = {
         ...draftPayload,
         ...clearanceData,
+        idempotencyKey,
       };
       setIsSubmitting(false);
       setIssuedReceipt(finalReceipt);
@@ -359,6 +361,7 @@ export const ReceiptIssuanceContent: React.FC<ReceiptIssuanceProps> = ({
         merchantTradeName: draftPayload.merchantTradeName,
         merchantAddress: draftPayload.merchantAddress,
         cashierName: draftPayload.cashierName,
+        idempotencyKey,
       } as any);
 
       showToast('MoR EIMS Clearance confirmed (HTTP 200). Receipt issued.');

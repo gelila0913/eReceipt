@@ -162,7 +162,7 @@ export const IssuedReceiptModal: React.FC<IssuedReceiptModalProps> = ({
     qrMode === 'image'
       ? receiptImageViewerUrl
       : qrMode === 'data-uri'
-      ? receiptDataUri
+      ? (receiptDataUri && receiptDataUri.length < 2000 ? receiptDataUri : receiptImageViewerUrl)
       : customerReceiptQrText;
 
   const handleCopyLink = async () => {

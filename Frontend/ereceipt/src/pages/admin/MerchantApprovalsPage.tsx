@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ApprovalsTabFilter } from '../../features/admin/merchant-approvals/components/ApprovalsTabFilter';
 import { ApprovalsTable } from '../../features/admin/merchant-approvals/components/ApprovalsTable';
 import type { MerchantApplicationItem } from '../../features/admin/types';
+import { API_BASE_URL } from '../../config/api';
 
 export const MerchantApprovalsPage: React.FC = () => {
   const [currentTab, setCurrentTab] = useState('All Applications');
@@ -12,7 +13,7 @@ export const MerchantApprovalsPage: React.FC = () => {
   const [applications, setApplications] = useState<MerchantApplicationItem[]>([]);
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/admin/merchants/applications')
+    fetch(`${API_BASE_URL}/api/admin/merchants/applications`)
       .then((res) => res.json())
       .then((data) => {
         if (data.success && Array.isArray(data.data)) {

@@ -433,6 +433,28 @@ export class OfficerAuthService {
     this.saveSessionsToFile();
     return result;
   }
+
+  /**
+   * List all registered revenue officers
+   */
+  getAllOfficers(): OfficerUser[] {
+    this.ensureLoaded();
+    return this.officersCache.map(({ passwordHash: _, ...officer }) => officer);
+  }
+
+  /**
+   * Deactivate/remove an officer
+   */
+  deactivateOfficer(id: string): boolean {
+    this.ensureLoaded();
+    const idx = this.officersCache.findIndex(
+      (o) => o.id === id || o.username.toLowerCase() === id.toLowerCase()
+    );
+    if (idx === -1) return false;
+    this.officersCache.splice(idx, 1);
+    this.saveToFile();
+    return true;
+  }
 }
 
 export const officerAuthService = new OfficerAuthService();

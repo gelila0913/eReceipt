@@ -242,6 +242,50 @@ export class OfficerAuthController {
       });
     }
   }
+
+  /**
+   * GET /api/admin/auth/officers
+   */
+  async listOfficers(_req: Request, res: Response): Promise<void> {
+    try {
+      const officers = officerAuthService.getAllOfficers();
+      res.status(200).json({
+        success: true,
+        data: officers,
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        error: error.message || 'Failed to list officers',
+      });
+    }
+  }
+
+  /**
+   * DELETE /api/admin/auth/officers/:id
+   */
+  async deleteOfficer(req: Request, res: Response): Promise<void> {
+    try {
+      const id = String(req.params.id);
+      const success = officerAuthService.deactivateOfficer(id);
+      if (!success) {
+        res.status(404).json({
+          success: false,
+          error: 'Officer not found',
+        });
+        return;
+      }
+      res.status(200).json({
+        success: true,
+        message: 'Officer removed successfully',
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        error: error.message || 'Failed to deactivate officer',
+      });
+    }
+  }
 }
 
 export const officerAuthController = new OfficerAuthController();

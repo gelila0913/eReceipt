@@ -38,9 +38,11 @@ export class AuditController {
     }
   }
 
-  async getAuditLogs(_req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getAuditLogs(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const logs = await auditService.getAuditLogs();
+      // Merchants see only their own logs; officers see all
+      const merchantTin = req.user?.role === 'merchant' ? req.user.identifier : undefined;
+      const logs = await auditService.getAuditLogs(merchantTin);
       sendSuccess(res, logs, "Audit event logs retrieved");
     } catch (error) {
       next(error);

@@ -50,7 +50,7 @@ class Database {
     }
   }
 
-  private persistReceipts(): void {
+  public persistReceipts(): void {
     try {
       fs.writeFileSync(RECEIPTS_FILE, JSON.stringify(this.receipts, null, 2), 'utf-8');
     } catch (err) {

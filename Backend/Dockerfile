@@ -49,8 +49,8 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/src/database ./src/database
 COPY data/ ./data/
 
-# Ensure application files and data directory are owned by nodejs user
-RUN mkdir -p /app/data && chown -R nodejs:nodejs /app
+# Ensure application files, data directory, and uploads are owned by nodejs user
+RUN mkdir -p /app/data /app/uploads/licenses && chown -R nodejs:nodejs /app
 
 USER nodejs
 

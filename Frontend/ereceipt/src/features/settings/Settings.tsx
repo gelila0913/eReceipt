@@ -4,7 +4,17 @@ import { BusinessProfileTab } from './components/tabs/BusinessProfileTab';
 import styles from './Settings.module.css';
 
 export const Settings: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<SettingsTabId>('profile');
+  const [activeTab, setActiveTab] = useState<SettingsTabId>(() => {
+    const saved = window.sessionStorage.getItem('ereceipt_settings_tab') as SettingsTabId | null;
+    return saved && ['profile', 'preferences', 'notifications', 'security'].includes(saved)
+      ? saved
+      : 'profile';
+  });
+
+  const handleTabChange = (tab: SettingsTabId) => {
+    setActiveTab(tab);
+    window.sessionStorage.setItem('ereceipt_settings_tab', tab);
+  };
 
   return (
     <div className={styles.container}>
@@ -20,7 +30,7 @@ export const Settings: React.FC = () => {
 
       <div className={styles.contentGrid}>
         <aside className={styles.navColumn}>
-          <SettingsVerticalNav activeTab={activeTab} onTabChange={setActiveTab} />
+          <SettingsVerticalNav activeTab={activeTab} onTabChange={handleTabChange} />
         </aside>
 
         <main className={styles.mainColumn}>

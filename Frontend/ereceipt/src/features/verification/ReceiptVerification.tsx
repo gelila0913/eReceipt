@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { findReceiptByIrn, type StoredReceipt } from '../../services/merchantDataStore';
 import { getReceiptViewerUrl, generateCompactReceiptSvg } from '../../utils/receiptImageRenderer';
+import { API_BASE_URL } from '../../config/api';
 import styles from './ReceiptVerification.module.css';
 
 interface ReceiptVerificationProps {
@@ -49,7 +50,7 @@ export const ReceiptVerification: React.FC<ReceiptVerificationProps> = ({ onNavi
 
     try {
       // 1. Try Backend verification endpoint
-      const res = await fetch(`http://localhost:5000/api/receipts/verify/${encodeURIComponent(clean)}`);
+      const res = await fetch(`${API_BASE_URL}/api/receipts/verify/${encodeURIComponent(clean)}`);
       if (res.ok) {
         const data = await res.json();
         if (data.valid && data.receipt) {

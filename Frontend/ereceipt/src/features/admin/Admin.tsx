@@ -15,6 +15,7 @@ import { TaxReportReview } from './components/TaxReportReview';
 import { TaxRecordsLedger } from './components/TaxRecordsLedger';
 import { AdminAuditLog } from './components/AdminAuditLog';
 import { AdminSettings } from './components/AdminSettings';
+import { API_BASE_URL } from '../../config/api';
 
 import type {
   AdminPage,
@@ -78,7 +79,7 @@ export const Admin: React.FC<AdminProps> = ({ onReturnToMerchant }) => {
   const handleSignOut = () => {
     const token = localStorage.getItem('officer_token');
     if (token) {
-      fetch('http://localhost:5000/api/admin/auth/logout', {
+      fetch(`${API_BASE_URL}/api/admin/auth/logout`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -96,7 +97,7 @@ export const Admin: React.FC<AdminProps> = ({ onReturnToMerchant }) => {
     const token = localStorage.getItem('officer_token');
     const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
-    fetch('http://localhost:5000/api/admin/merchants/applications', { headers })
+    fetch(`${API_BASE_URL}/api/admin/merchants/applications`, { headers })
       .then((res) => res.json())
       .then((data) => {
         if (data.success && Array.isArray(data.data)) {
@@ -108,7 +109,7 @@ export const Admin: React.FC<AdminProps> = ({ onReturnToMerchant }) => {
       })
       .catch(() => {});
 
-    fetch('http://localhost:5000/api/admin/merchants/directory', { headers })
+    fetch(`${API_BASE_URL}/api/admin/merchants/directory`, { headers })
       .then((res) => res.json())
       .then((data) => {
         if (data.success && Array.isArray(data.data)) {
@@ -117,7 +118,7 @@ export const Admin: React.FC<AdminProps> = ({ onReturnToMerchant }) => {
       })
       .catch(() => {});
 
-    fetch('http://localhost:5000/api/receipts')
+    fetch(`${API_BASE_URL}/api/receipts`)
       .then((res) => res.json())
       .then((data) => {
         if (data.success && Array.isArray(data.receipts)) {
@@ -198,7 +199,7 @@ export const Admin: React.FC<AdminProps> = ({ onReturnToMerchant }) => {
 
   const handleToggleMerchantStatus = (merchantId: string, nextStatus: 'Active' | 'Suspended') => {
     const token = localStorage.getItem('officer_token');
-    fetch(`http://localhost:5000/api/admin/merchants/directory/${merchantId}/status`, {
+    fetch(`${API_BASE_URL}/api/admin/merchants/directory/${merchantId}/status`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -277,7 +278,7 @@ export const Admin: React.FC<AdminProps> = ({ onReturnToMerchant }) => {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       };
 
-      fetch(`http://localhost:5000/api/admin/merchants/applications/${selectedApplication.ref}/decision`, {
+      fetch(`${API_BASE_URL}/api/admin/merchants/applications/${selectedApplication.ref}/decision`, {
         method: 'POST',
         headers: authHeaders,
         body: JSON.stringify({
@@ -290,7 +291,7 @@ export const Admin: React.FC<AdminProps> = ({ onReturnToMerchant }) => {
         .then((resData) => {
           if (resData.success) {
             // refresh directory from live backend
-            fetch('http://localhost:5000/api/admin/merchants/directory', {
+            fetch(`${API_BASE_URL}/api/admin/merchants/directory`, {
               headers: token ? { Authorization: `Bearer ${token}` } : {},
             })
               .then((r) => r.json())

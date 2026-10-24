@@ -61,10 +61,45 @@ export function getStoredMerchantProfile(): MerchantUserProfile {
         authMerchant.businessName || profile.sellerLegalName || authMerchant.sellerLegalName || '';
       profile.tradeName =
         authMerchant.tradeName || profile.tradeName || authMerchant.businessName || '';
-      if (!profile.fullName && authMerchant.fullName) {
+      if (authMerchant.fullName) {
         profile.fullName = authMerchant.fullName;
       }
+      if (authMerchant.phoneNumber) {
+        profile.phoneNumber = authMerchant.phoneNumber;
+      }
+      if (authMerchant.email) {
+        profile.email = authMerchant.email;
+      }
+      if (authMerchant.businessLicenseNumber) {
+        profile.businessLicenseNumber = authMerchant.businessLicenseNumber;
+      }
+      if (authMerchant.city) {
+        profile.city = authMerchant.city;
+      }
+      if (authMerchant.subCity) {
+        profile.subCity = authMerchant.subCity;
+      }
+      if (authMerchant.buildingName) {
+        profile.buildingName = authMerchant.buildingName;
+      }
+      if (authMerchant.floor) {
+        profile.floor = authMerchant.floor;
+      }
+      if (authMerchant.gpsLocation) {
+        profile.gpsLocation = authMerchant.gpsLocation;
+      }
+      if (authMerchant.referenceNumber) {
+        profile.referenceNumber = authMerchant.referenceNumber;
+      }
       profile.status = authMerchant.status || profile.status || 'Approved';
+    }
+
+    // 3. Fallback: Recover phone number from registered TIN cache so it is never lost or deleted
+    if (profile.tin && !profile.phoneNumber) {
+      const backupPhone = window.localStorage.getItem(`ereceipt_phone_${profile.tin}`);
+      if (backupPhone) {
+        profile.phoneNumber = backupPhone;
+      }
     }
 
     return profile;
@@ -75,6 +110,52 @@ export function getStoredMerchantProfile(): MerchantUserProfile {
 
 export function saveStoredMerchantProfile(profile: MerchantUserProfile): void {
   try {
+    // Guard against deletion: if caller passed empty phoneNumber but existing profile or backup has it, preserve it!
+    const existingRaw = window.localStorage.getItem(STORAGE_KEY);
+    if (existingRaw) {
+      try {
+        const existing = JSON.parse(existingRaw);
+        if (existing.tin === profile.tin) {
+          if (existing.phoneNumber && !profile.phoneNumber) {
+            profile.phoneNumber = existing.phoneNumber;
+          }
+          if (existing.email && !profile.email) {
+            profile.email = existing.email;
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    if (profile.tin && !profile.phoneNumber) {
+      const backupPhone = window.localStorage.getItem(`ereceipt_phone_${profile.tin}`);
+      if (backupPhone) {
+        profile.phoneNumber = backupPhone;
+      }
+    }
+
+    // Persist phone backup whenever present
+    if (profile.tin && profile.phoneNumber) {
+      window.localStorage.setItem(`ereceipt_phone_${profile.tin}`, profile.phoneNumber);
+
+      // Keep active merchant session synchronized with real phone number
+      const authRaw = window.localStorage.getItem('ereceipt_merchant');
+      if (authRaw) {
+        try {
+          const authObj = JSON.parse(authRaw);
+          if (authObj.tin === profile.tin) {
+            authObj.phoneNumber = profile.phoneNumber;
+            if (profile.email) authObj.email = profile.email;
+            window.localStorage.setItem('ereceipt_merchant', JSON.stringify(authObj));
+            window.localStorage.setItem('merchant_user', JSON.stringify(authObj));
+          }
+        } catch {
+          // ignore
+        }
+      }
+    }
+
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
     // Dispatch custom events so all dependent components (Sidebar, Topbar, Ledger, Audit, Preview) re-render immediately
     window.dispatchEvent(new Event('ereceipt:profile_updated'));

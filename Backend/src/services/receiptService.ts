@@ -66,6 +66,15 @@ export class ReceiptService {
       return { success: false, errors };
     }
 
+    // Check if receipt was already issued under this idempotency key
+    const idempotencyKey = (draft as any).idempotencyKey;
+    if (idempotencyKey) {
+      const existing = db.getAllReceipts().receipts.find((r: any) => r.idempotencyKey === idempotencyKey);
+      if (existing) {
+        return { success: true, receipt: existing };
+      }
+    }
+
     // 3. Obtain official Fiscal Clearance from MoR EIMS
     const clearanceData = FiscalClearanceService.clearInvoice({
       ...draft,
@@ -83,6 +92,7 @@ export class ReceiptService {
       total: taxResults.total,
       ...clearanceData,
       status: 'CLEARED',
+      idempotencyKey,
       createdAt: new Date().toISOString(),
     };
 

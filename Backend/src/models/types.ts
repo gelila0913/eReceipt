@@ -71,6 +71,7 @@ export interface ReceiptDraft {
   total: number;
   paymentMethod: PaymentMethod;
   paymentReference: string;
+  idempotencyKey?: string;
 }
 
 export interface FiscalClearanceData {

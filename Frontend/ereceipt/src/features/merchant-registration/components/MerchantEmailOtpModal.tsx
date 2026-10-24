@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Mail, CheckCircle2, AlertCircle, RotateCw, X, Zap } from 'lucide-react';
+import { API_BASE_URL } from '../../../config/api';
 
 interface MerchantEmailOtpModalProps {
   email: string;
@@ -8,8 +9,6 @@ interface MerchantEmailOtpModalProps {
   onClose: () => void;
   onVerified: () => void;
 }
-
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000').replace(/\/+$/, '');
 
 export const MerchantEmailOtpModal: React.FC<MerchantEmailOtpModalProps> = ({
   email,
@@ -121,7 +120,7 @@ export const MerchantEmailOtpModal: React.FC<MerchantEmailOtpModalProps> = ({
         setSimulatedCode(fallback);
         setIsSimulated(true);
         setDeliveryNotice(
-          'Backend is currently offline or unreachable on http://localhost:5000. Running in offline development mode: use code 123456 to continue.'
+          'Backend is currently offline or unreachable. Running in offline development mode: use code 123456 to continue.'
         );
         setSuccessNotice('Offline demo mode active (Backend is not reachable).');
       } else {

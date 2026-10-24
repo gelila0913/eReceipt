@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -8,6 +8,7 @@ import {
   getStoredMerchantProfile,
   saveStoredMerchantProfile,
 } from '../../../merchant-registration';
+import { API_BASE_URL } from '../../../../config/api';
 import styles from './BusinessProfileTab.module.css';
 
 const businessProfileSchema = z.object({
@@ -39,13 +40,14 @@ export const BusinessProfileTab: React.FC<BusinessProfileTabProps> = ({
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<BusinessProfileFormData>({
     resolver: zodResolver(businessProfileSchema),
     defaultValues: {
       legalName: initialValues?.legalName ?? storedProfile.sellerLegalName,
       tradeName: initialValues?.tradeName ?? storedProfile.tradeName,
-      businessEmail: initialValues?.businessEmail ?? '',
+      businessEmail: initialValues?.businessEmail ?? storedProfile.email ?? '',
       phone: initialValues?.phone ?? storedProfile.phoneNumber,
       businessSector: initialValues?.businessSector ?? '',
       city: initialValues?.city ?? storedProfile.city,
@@ -59,17 +61,112 @@ export const BusinessProfileTab: React.FC<BusinessProfileTabProps> = ({
     },
   });
 
+  // Automatically fetch registered business details from backend so the official phone number and details are always pre-filled
+  useEffect(() => {
+    const token =
+      localStorage.getItem('merchant_token') ||
+      localStorage.getItem('ereceipt_token') ||
+      sessionStorage.getItem('ereceipt_token');
+    const tin = storedProfile.tin;
+    const url = tin
+      ? `${API_BASE_URL}/api/settings/profile?tin=${encodeURIComponent(tin)}`
+      : `${API_BASE_URL}/api/settings/profile`;
+
+    fetch(url, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+      .then((res) => {
+        if (!res.ok) return null;
+        return res.json();
+      })
+      .then((resData) => {
+        if (!resData) return;
+        const p = resData.data || resData;
+        if (p) {
+          const currentProfile = getStoredMerchantProfile();
+          const resolvedPhone = p.phoneNumber || currentProfile.phoneNumber || '';
+          const resolvedEmail = p.businessEmail || p.email || currentProfile.email || '';
+          const resolvedLegal = p.legalName || currentProfile.sellerLegalName || '';
+          const resolvedTrade = p.tradeName || currentProfile.tradeName || '';
+
+          if (resolvedPhone) {
+            currentProfile.phoneNumber = resolvedPhone;
+          }
+          if (resolvedEmail) {
+            currentProfile.email = resolvedEmail;
+          }
+          if (resolvedLegal) {
+            currentProfile.sellerLegalName = resolvedLegal;
+          }
+          if (resolvedTrade) {
+            currentProfile.tradeName = resolvedTrade;
+          }
+          if (p.merchantRef) {
+            currentProfile.referenceNumber = p.merchantRef;
+          }
+          saveStoredMerchantProfile(currentProfile);
+
+          // Populate form inputs so phone number and registered data are never blank
+          reset((prev) => ({
+            ...prev,
+            legalName: prev.legalName || resolvedLegal,
+            tradeName: prev.tradeName || resolvedTrade,
+            businessEmail: prev.businessEmail || resolvedEmail,
+            phone: prev.phone || resolvedPhone,
+            city: prev.city || currentProfile.city || '',
+            subCity: prev.subCity || currentProfile.subCity || '',
+            houseNumber:
+              prev.houseNumber ||
+              (currentProfile.buildingName
+                ? `${currentProfile.buildingName}${currentProfile.floor ? `, ${currentProfile.floor}` : ''}`
+                : p.businessAddress || ''),
+          }));
+        }
+      })
+      .catch((err) => {
+        console.warn('Profile sync:', err);
+      });
+  }, [reset, storedProfile.tin]);
+
   const onSubmit = (data: BusinessProfileFormData) => {
     setIsSuccess(true);
-    saveStoredMerchantProfile({
+    const updated = {
       ...storedProfile,
       sellerLegalName: data.legalName,
       tradeName: data.tradeName,
-      phoneNumber: data.phone,
+      phoneNumber: data.phone || storedProfile.phoneNumber,
+      email: data.businessEmail || storedProfile.email,
       city: data.city,
       subCity: data.subCity,
       buildingName: data.houseNumber,
-    });
+    };
+    saveStoredMerchantProfile(updated);
+
+    // Also persist update to backend
+    const token =
+      localStorage.getItem('merchant_token') ||
+      localStorage.getItem('ereceipt_token') ||
+      sessionStorage.getItem('ereceipt_token');
+    const tin = storedProfile.tin;
+    const url = tin
+      ? `${API_BASE_URL}/api/settings/profile?tin=${encodeURIComponent(tin)}`
+      : `${API_BASE_URL}/api/settings/profile`;
+
+    fetch(url, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({
+        legalName: data.legalName,
+        tradeName: data.tradeName,
+        phoneNumber: data.phone,
+        businessEmail: data.businessEmail,
+        businessAddress: `${data.houseNumber}, ${data.subCity}, ${data.city}`,
+      }),
+    }).catch((err) => console.warn('Backend profile update error:', err));
+
     if (onSave) {
       onSave(data);
     }

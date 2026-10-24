@@ -31,7 +31,17 @@ function downloadCsv(filename: string, rows: string[][]) {
 
 export const Audit: React.FC<AuditProps> = ({ initialScreen = 'dashboard', onNavigate }) => {
   const [activeScreen, setActiveScreen] = useState<string>(initialScreen);
-  const [settingsTab, setSettingsTab] = useState<SettingsTabId>('profile');
+  const [settingsTab, setSettingsTab] = useState<SettingsTabId>(() => {
+    const saved = window.sessionStorage.getItem('ereceipt_settings_tab') as SettingsTabId | null;
+    return saved && ['profile', 'preferences', 'notifications', 'security'].includes(saved)
+      ? saved
+      : 'profile';
+  });
+
+  const handleSettingsTabChange = (tab: SettingsTabId) => {
+    setSettingsTab(tab);
+    window.sessionStorage.setItem('ereceipt_settings_tab', tab);
+  };
 
   // Authenticated merchant isolation
   const [merchantProfile, setMerchantProfile] = useState(() => getStoredMerchantProfile());
@@ -41,6 +51,7 @@ export const Audit: React.FC<AuditProps> = ({ initialScreen = 'dashboard', onNav
   useEffect(() => {
     if (initialScreen) {
       setActiveScreen(initialScreen);
+      window.sessionStorage.setItem('ereceipt_active_screen', initialScreen);
     }
   }, [initialScreen]);
 
@@ -118,18 +129,29 @@ export const Audit: React.FC<AuditProps> = ({ initialScreen = 'dashboard', onNav
       return;
     }
     if (screen === 'signin' || screen === 'login' || screen === 'signout' || screen === 'logout') {
+      window.sessionStorage.removeItem('ereceipt_active_screen');
       onNavigate?.('signin');
       return;
     }
     if (screen === 'landing' || screen === 'home') {
+      window.sessionStorage.removeItem('ereceipt_active_screen');
       onNavigate?.('landing');
       return;
     }
-    if (screen === 'receipt-issuance') {
-      setActiveScreen('pos');
-      return;
+    const resolvedScreen = screen === 'receipt-issuance' ? 'pos' : screen;
+    setActiveScreen(resolvedScreen);
+    window.sessionStorage.setItem('ereceipt_active_screen', resolvedScreen);
+    window.sessionStorage.setItem('ereceipt_active_view', 'merchant');
+    try {
+      window.history.replaceState(
+        { view: 'merchant', screen: resolvedScreen },
+        '',
+        `?view=merchant&screen=${resolvedScreen}`
+      );
+    } catch {
+      // ignore
     }
-    setActiveScreen(screen);
+    onNavigate?.(resolvedScreen);
   };
 
   return (
@@ -201,7 +223,7 @@ export const Audit: React.FC<AuditProps> = ({ initialScreen = 'dashboard', onNav
             }}
           >
             <aside style={{ position: 'sticky', top: '24px' }}>
-              <SettingsVerticalNav activeTab={settingsTab} onTabChange={setSettingsTab} />
+              <SettingsVerticalNav activeTab={settingsTab} onTabChange={handleSettingsTabChange} />
             </aside>
 
             <div style={{ minWidth: 0 }}>

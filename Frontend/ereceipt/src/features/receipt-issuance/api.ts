@@ -1,6 +1,7 @@
 import type { ReceiptDraft, IssuedReceipt, CartItem } from './types';
+import { API_BASE_URL as ROOT_API_BASE_URL } from '../../config/api';
 
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = `${ROOT_API_BASE_URL}/api`.replace(/\/+api\/api$/, '/api');
 
 export interface BackendHealthResponse {
   status: string;
@@ -87,9 +88,12 @@ export async function verifyTinApi(tin: string): Promise<TinVerifyResult> {
 }
 
 /**
- * Submit draft receipt to Backend for official MoR EIMS fiscal clearance
+ * Submit draft receipt to Backend for official MoR EIMS fiscal clearance with idempotency
  */
-export async function issueReceiptApi(draft: ReceiptDraft): Promise<IssuedReceipt> {
+export async function issueReceiptApi(
+  draft: ReceiptDraft,
+  idempotencyKey?: string
+): Promise<IssuedReceipt> {
   const token =
     (typeof window !== 'undefined' &&
       (localStorage.getItem('ereceipt_token') ||
@@ -97,8 +101,15 @@ export async function issueReceiptApi(draft: ReceiptDraft): Promise<IssuedReceip
         sessionStorage.getItem('ereceipt_token'))) ||
     null;
 
+  const key =
+    idempotencyKey ||
+    (draft as any).idempotencyKey ||
+    `idem-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
+    'Idempotency-Key': key,
+    'X-Idempotency-Key': key,
   };
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
@@ -108,7 +119,7 @@ export async function issueReceiptApi(draft: ReceiptDraft): Promise<IssuedReceip
     method: 'POST',
     credentials: 'include',
     headers,
-    body: JSON.stringify(draft),
+    body: JSON.stringify({ ...draft, idempotencyKey: key }),
   });
 
   if (!res.ok) {

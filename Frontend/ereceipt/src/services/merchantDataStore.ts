@@ -1,3 +1,5 @@
+import { API_BASE_URL } from '../config/api';
+
 export interface ReceiptItem {
   id: number | string;
   code: string;
@@ -45,6 +47,7 @@ export interface StoredReceipt {
   qrPayload?: string;
   qrVerificationUrl?: string;
   status: string;
+  idempotencyKey?: string;
 }
 
 export interface MonthlyLedgerRecord {
@@ -105,8 +108,16 @@ export function saveMerchantReceipt(merchantTin: string, receipt: StoredReceipt)
       ...receipt,
       merchantTin: cleanTin,
     };
-    // Prepend new receipt and deduplicate by id
-    const updated = [boundedReceipt, ...receipts.filter((r) => r.id !== receipt.id)];
+    // Prepend new receipt and deduplicate idempotently by id, irn, or idempotencyKey
+    const updated = [
+      boundedReceipt,
+      ...receipts.filter(
+        (r) =>
+          r.id !== receipt.id &&
+          (!receipt.irn || r.irn !== receipt.irn) &&
+          (!receipt.idempotencyKey || r.idempotencyKey !== receipt.idempotencyKey)
+      ),
+    ];
     localStorage.setItem(key, JSON.stringify(updated));
 
     // Dispatch global event so all screens re-compute immediately
@@ -139,7 +150,7 @@ export async function syncMerchantReceipts(
     }
 
     const res = await fetch(
-      `http://localhost:5000/api/receipts?merchantTin=${encodeURIComponent(cleanTin)}`,
+      `${API_BASE_URL}/api/receipts?merchantTin=${encodeURIComponent(cleanTin)}`,
       { headers }
     );
     if (!res.ok) return getMerchantReceipts(cleanTin);
@@ -147,7 +158,7 @@ export async function syncMerchantReceipts(
     const json = await res.json();
     const serverReceipts = json.receipts || [];
     // Strictly isolate only receipts belonging to this merchant
-    const valid = serverReceipts.filter((r: any) => r.merchantTin === cleanTin);
+    const valid = serverReceipts.filter((r: StoredReceipt) => r.merchantTin === cleanTin);
 
     const local = getMerchantReceipts(cleanTin);
     const map = new Map<string, StoredReceipt>();

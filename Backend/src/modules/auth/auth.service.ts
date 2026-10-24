@@ -9,6 +9,7 @@ import { MerchantAuthResponse, OfficerAuthResponse } from "./auth.types.js";
 import { applicationStorage } from "../../features/merchant-registration/storage.js";
 import { verifyPassword, hashPassword, signJwt } from "../../common/auth/security.js";
 import { otpService } from "../../services/otp.service.js";
+import { officerAuthService } from "../../features/admin/officer-auth/auth.service.js";
 
 export class AuthService {
   /**
@@ -57,6 +58,13 @@ export class AuthService {
       throw new ForbiddenError(`Merchant account is not active (Current status: ${app.status}).`);
     }
 
+    // Enforce email verification if email was provided
+    if (app.email && app.emailVerified === false) {
+      throw new ForbiddenError(
+        "Your email address has not been verified. Please verify your email via OTP before logging in."
+      );
+    }
+
     // 3. Verify password hash using constant-time comparison
     const isPasswordValid = verifyPassword(input.password, app.passwordHash);
     if (!isPasswordValid) {
@@ -83,6 +91,17 @@ export class AuthService {
         businessName: app.sellerLegalName,
         tradeName: app.tradeName,
         status: app.status,
+        phoneNumber: app.phoneNumber || "",
+        email: app.email || "",
+        fullName: app.fullName || "",
+        businessLicenseNumber: app.businessLicenseNumber || "",
+        city: app.city || "",
+        subCity: app.subCity || "",
+        buildingName: app.buildingName || "",
+        floor: app.floor || "",
+        gpsLocation: app.gpsLocation || "",
+        referenceNumber: app.referenceNumber || "",
+        submissionDate: app.submissionDate || "",
       },
     };
   }
@@ -122,32 +141,37 @@ export class AuthService {
   }
 
   /**
-   * Authenticate Revenue Officer by username and password
+   * Authenticate Revenue Officer by username and password.
+   * Delegates to the disk-persisted officerAuthService (supports multiple officers,
+   * officer registration, and 2FA).
    */
   async loginOfficer(input: OfficerLoginInput): Promise<OfficerAuthResponse> {
-    const username = (input.username || "").trim().toLowerCase();
-    if (username === "officer.demo" && input.password === "Revenue123") {
-      const token = signJwt({
-        sub: "off-001",
-        role: "officer",
-        identifier: "officer.demo",
-        name: "Abebe Bikila",
-        username: "officer.demo",
-      });
+    // Delegate to the real officer auth which uses disk-persisted admin-officers.json
+    const loginResult = await officerAuthService.login({
+      username: input.username,
+      password: input.password,
+      rememberMe: false,
+    });
 
+    // If 2FA is required, surface that requirement
+    if (loginResult.requires2FA) {
+      // Return a partial response indicating 2FA challenge
       return {
-        token,
+        token: loginResult.tempToken || "",
+        requires2FA: true,
+        maskedEmail: loginResult.maskedEmail,
         user: {
-          id: "off-001",
+          id: "",
           role: "officer",
-          username: "officer.demo",
-          fullName: "Abebe Bikila",
-          department: "Ministry of Revenues - Large Taxpayers Office",
+          username: input.username,
+          fullName: "",
+          department: "",
         },
-      };
+      } as any;
     }
 
-    throw new UnauthorizedError("Invalid officer credentials. Check demo username and password.");
+    // Should not reach here for officer login since 2FA is always required
+    throw new UnauthorizedError("Officer authentication requires 2-factor verification.");
   }
 }
 

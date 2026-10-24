@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Badge } from './Badge';
 import type { Tone, MerchantApplicationItem, Decision } from '../types';
+import { API_BASE_URL } from '../../../config/api';
 import styles from './Approvals.module.css';
 
 interface MerchantReviewProps {
@@ -54,7 +55,7 @@ export const MerchantReview: React.FC<MerchantReviewProps> = ({
     );
   }
 
-  const documentDownloadUrl = `http://localhost:5000/api/admin/merchants/applications/${application.ref}/document`;
+  const documentDownloadUrl = `${API_BASE_URL}/api/admin/merchants/applications/${application.ref}/document`;
 
   const fetchApplicationDocument = async (): Promise<Blob> => {
     const token = localStorage.getItem('officer_token');

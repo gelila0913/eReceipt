@@ -1,22 +1,59 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Download } from 'lucide-react';
 import { TransactionsTable } from './components/TransactionsTable';
 import { TransactionDetailsModal } from './components/TransactionDetailsModal';
-import { mockMonthlyTransactions } from './data/mockTransactions';
 import type { MonthlyTransactionSummary } from './types/TransactionTypes';
+import {
+  getMerchantMonthlyLedger,
+  syncMerchantReceipts,
+} from '../../services/merchantDataStore';
+import { getStoredMerchantProfile } from '../merchant-registration';
 import styles from './TransactionsView.module.css';
 
 export interface TransactionsViewProps {
   onNavigate?: (screen: string) => void;
 }
 
+function computeMerchantRecords(): MonthlyTransactionSummary[] {
+  const profile = getStoredMerchantProfile();
+  const tin = profile.tin?.trim() || '';
+  if (!tin) return [];
+  const ledger = getMerchantMonthlyLedger(tin);
+  return ledger.map((rec) => ({
+    id: rec.id,
+    month: rec.month,
+    year: String(rec.year),
+    totalIncome: rec.totalIncome,
+    totalTax: rec.totalTax,
+    expenses: rec.expenses,
+    receiptCount: rec.invoicesCount,
+    clearanceBatch: `MOR-CLR-${rec.monthKey.replace('-', '')}`,
+    clearedRate: 100,
+  }));
+}
+
 export const TransactionsView: React.FC<TransactionsViewProps> = ({ onNavigate }) => {
   const [selectedRecord, setSelectedRecord] = useState<MonthlyTransactionSummary | null>(null);
-  const [selectedYear, setSelectedYear] = useState('2026');
+  const currentYearStr = new Date().getFullYear().toString();
+  const [selectedYear, setSelectedYear] = useState(currentYearStr);
+  const [records, setRecords] = useState<MonthlyTransactionSummary[]>(computeMerchantRecords);
+
+  useEffect(() => {
+    const profile = getStoredMerchantProfile();
+    if (profile.tin) {
+      syncMerchantReceipts(profile.tin).then(() => {
+        setRecords(computeMerchantRecords());
+      });
+    }
+
+    const handleUpdate = () => setRecords(computeMerchantRecords());
+    window.addEventListener('ereceipt:receipts_updated', handleUpdate);
+    return () => window.removeEventListener('ereceipt:receipts_updated', handleUpdate);
+  }, []);
 
   // Export CSV handler
   const handleExportMonthlyReport = () => {
-    const yearRecords = mockMonthlyTransactions.filter((r) => r.year === selectedYear);
+    const yearRecords = records.filter((r) => r.year === selectedYear);
     const headers = [
       'Month',
       'Year',
@@ -29,20 +66,20 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({ onNavigate }
       'MoR Status',
     ];
 
-    const rows = yearRecords.map((r) => [
+    const rows = yearRecords.map((r: MonthlyTransactionSummary) => [
       r.month,
       r.year,
       r.totalIncome.toFixed(2),
       r.totalTax.toFixed(2),
       r.expenses.toFixed(2),
       (r.totalIncome - r.expenses - r.totalTax).toFixed(2),
-      String(r.receiptCount || 1500),
-      r.clearanceBatch || 'MOR-CLR-2026',
+      String(r.receiptCount || 0),
+      r.clearanceBatch || 'MOR-CLR-REAL',
       'Cleared (Real-Time)',
     ]);
 
     const csvContent = [headers, ...rows]
-      .map((row) => row.map((cell) => `"${cell.replaceAll('"', '""')}"`).join(','))
+      .map((row) => row.map((cell: string) => `"${cell.replaceAll('"', '""')}"`).join(','))
       .join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
@@ -56,7 +93,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({ onNavigate }
 
   return (
     <div className={styles.container}>
-      {/* Page Header matching exact screenshot */}
+      {/* Page Header */}
       <div className={styles.header}>
         <div>
           <h1 className={styles.title}>Transactions</h1>
@@ -70,6 +107,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({ onNavigate }
           type="button"
           onClick={handleExportMonthlyReport}
           className={styles.exportBtn}
+          disabled={records.length === 0}
         >
           <Download size={18} className={styles.exportIcon} />
           <span>Export monthly report</span>
@@ -78,7 +116,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({ onNavigate }
 
       {/* Main Card with Filter Bar and Table */}
       <TransactionsTable
-        records={mockMonthlyTransactions}
+        records={records}
         selectedYear={selectedYear}
         onYearChange={setSelectedYear}
         onViewDetails={(record) => setSelectedRecord(record)}

@@ -82,6 +82,47 @@ class MerchantApplicationStorage {
     this.saveToFile();
   }
 
+  public updateProfileDetails(
+    tin: string,
+    updates: {
+      phoneNumber?: string;
+      email?: string;
+      sellerLegalName?: string;
+      tradeName?: string;
+      buildingName?: string;
+      city?: string;
+      subCity?: string;
+    }
+  ): StoredMerchantApplication | null {
+    this.ensureLoaded();
+    const app = this.getByTin(tin);
+    if (!app) return null;
+    if (updates.phoneNumber !== undefined && updates.phoneNumber.trim().length > 0) {
+      app.phoneNumber = updates.phoneNumber.trim();
+    }
+    if (updates.email !== undefined && updates.email.trim().length > 0) {
+      app.email = updates.email.trim();
+    }
+    if (updates.sellerLegalName !== undefined && updates.sellerLegalName.trim().length > 0) {
+      app.sellerLegalName = updates.sellerLegalName.trim();
+    }
+    if (updates.tradeName !== undefined && updates.tradeName.trim().length > 0) {
+      app.tradeName = updates.tradeName.trim();
+    }
+    if (updates.buildingName !== undefined && updates.buildingName.trim().length > 0) {
+      app.buildingName = updates.buildingName.trim();
+    }
+    if (updates.city !== undefined && updates.city.trim().length > 0) {
+      app.city = updates.city.trim();
+    }
+    if (updates.subCity !== undefined && updates.subCity.trim().length > 0) {
+      app.subCity = updates.subCity.trim();
+    }
+    app.updatedAt = new Date().toISOString();
+    this.saveToFile();
+    return app;
+  }
+
   public updateForReverification(
     tin: string,
     updates: Partial<

@@ -54,6 +54,9 @@ services:
       PGDATABASE: ${POSTGRES_DB:-ereceipt}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-eReceipt Tax Portal <onboarding@resend.dev>}
+    volumes:
+      - backend_data:/app/data
+      - backend_uploads:/app/uploads
     ports:
       - "${BACKEND_PORT:-5000}:5000"
     depends_on:
@@ -76,7 +79,7 @@ services:
       context: ./Frontend/ereceipt
       dockerfile: Dockerfile
       args:
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:5000}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
     container_name: ereceipt-frontend
     restart: unless-stopped
     ports:
@@ -99,6 +102,10 @@ services:
 volumes:
   postgres_data:
     name: ereceipt_postgres_data
+  backend_data:
+    name: ereceipt_backend_data
+  backend_uploads:
+    name: ereceipt_backend_uploads
 
 networks:
   ereceipt-net:

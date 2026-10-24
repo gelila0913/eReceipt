@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { TaxpayerSearchCard } from '../../features/admin/merchant-directory/components/TaxpayerSearchCard';
 import { MerchantDirectoryTable } from '../../features/admin/merchant-directory/components/MerchantDirectoryTable';
 import type { DirectoryMerchantItem } from '../../features/admin/types';
+import { API_BASE_URL } from '../../config/api';
 
 export const MerchantDirectoryPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -10,7 +11,7 @@ export const MerchantDirectoryPage: React.FC = () => {
   const [merchants, setMerchants] = useState<DirectoryMerchantItem[]>([]);
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/admin/merchants/directory')
+    fetch(`${API_BASE_URL}/api/admin/merchants/directory`)
       .then((res) => res.json())
       .then((data) => {
         if (data.success && Array.isArray(data.data)) {

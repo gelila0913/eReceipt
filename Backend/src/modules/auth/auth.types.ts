@@ -13,6 +13,17 @@ export interface MerchantAuthResponse {
       | "Rejected"
       | "Additional Information Required"
       | "Suspended";
+    phoneNumber?: string;
+    email?: string;
+    fullName?: string;
+    businessLicenseNumber?: string;
+    city?: string;
+    subCity?: string;
+    buildingName?: string;
+    floor?: string;
+    gpsLocation?: string;
+    referenceNumber?: string;
+    submissionDate?: string;
   };
 }
 
