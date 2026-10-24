@@ -7,10 +7,10 @@ export const receiptItemInputSchema = z.object({
 });
 
 export const createReceiptSchema = z.object({
-  merchantId: z.string().optional().default("MER-10482"),
-  merchantName: z.string().optional().default("Abeba Market PLC"),
-  merchantTin: z.string().optional().default("0012847391"),
-  merchantAddress: z.string().optional().default("Bole, Addis Ababa, Ethiopia"),
+  merchantId: z.string().optional(),
+  merchantName: z.string().optional(),
+  merchantTin: z.string().optional(),
+  merchantAddress: z.string().optional(),
   customerName: z.string().optional(),
   customerTin: z.string().optional(),
   customerPhone: z.string().optional(),

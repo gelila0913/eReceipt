@@ -105,11 +105,13 @@ export class ReceiptsService {
    */
   async getReceipts(filters?: {
     merchantId?: string;
+    merchantTin?: string;
     status?: string;
     search?: string;
   }): Promise<Receipt[]> {
     return this.receipts.filter((rc) => {
       if (filters?.merchantId && rc.merchantId !== filters.merchantId) return false;
+      if (filters?.merchantTin && rc.merchantTin !== filters.merchantTin) return false;
       if (filters?.status && filters.status !== "All" && rc.status !== filters.status) return false;
       if (filters?.search) {
         const q = filters.search.toLowerCase();

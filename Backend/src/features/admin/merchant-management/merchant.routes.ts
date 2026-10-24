@@ -1,7 +1,10 @@
 import { Router } from 'express';
 import { merchantManagementController } from './merchant.controller.js';
+import { requireOfficerSession } from '../../../middleware/requireOfficerSession.js';
 
 export const merchantManagementRouter = Router();
+
+merchantManagementRouter.use(requireOfficerSession);
 
 // Onboarding Applications Review
 merchantManagementRouter.get('/applications', (req, res) =>

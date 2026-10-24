@@ -1,6 +1,8 @@
 import type { Request, Response } from 'express';
+import fs from 'node:fs';
 import { registrationService } from './registration.service.js';
 import type { MerchantRegistrationInput } from './types.js';
+import { hasValidDocumentSignature } from './upload.middleware.js';
 
 export class MerchantRegistrationController {
   /**
@@ -10,6 +12,15 @@ export class MerchantRegistrationController {
     try {
       const input: MerchantRegistrationInput = req.body;
       const uploadedFile = req.file;
+
+      if (uploadedFile && !hasValidDocumentSignature(uploadedFile)) {
+        fs.unlinkSync(uploadedFile.path);
+        res.status(400).json({
+          success: false,
+          error: 'The uploaded file content does not match a supported document type.',
+        });
+        return;
+      }
 
       const result = await registrationService.submitRegistration(input, uploadedFile);
       res.status(201).json({
@@ -25,6 +36,33 @@ export class MerchantRegistrationController {
     }
   }
 
+  public async submitReverification(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.user || req.user.role !== 'merchant') {
+        res.status(403).json({ success: false, error: 'Merchant authentication is required.' });
+        return;
+      }
+      if (req.file && !hasValidDocumentSignature(req.file)) {
+        fs.unlinkSync(req.file.path);
+        res.status(400).json({
+          success: false,
+          error: 'The uploaded file content does not match a supported document type.',
+        });
+        return;
+      }
+
+      const result = registrationService.submitReverification(
+        req.user.identifier,
+        req.body,
+        req.file
+      );
+      res.status(202).json({ success: true, data: result });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Re-verification submission failed.';
+      res.status(400).json({ success: false, error: message });
+    }
+  }
+
   /**
    * POST /api/registration/upload-license
    */
@@ -37,6 +75,14 @@ export class MerchantRegistrationController {
         });
         return;
       }
+      if (!hasValidDocumentSignature(req.file)) {
+        fs.unlinkSync(req.file.path);
+        res.status(400).json({
+          success: false,
+          error: 'The uploaded file content does not match a supported document type.',
+        });
+        return;
+      }
 
       res.status(200).json({
         success: true,
@@ -45,7 +91,6 @@ export class MerchantRegistrationController {
           sizeBytes: req.file.size,
           sizeFormatted: `${(req.file.size / (1024 * 1024)).toFixed(1)} MB`,
           filename: req.file.filename,
-          path: req.file.path,
         },
       });
     } catch (err: unknown) {
@@ -102,7 +147,9 @@ export class MerchantRegistrationController {
    */
   public async getAllApplications(_req: Request, res: Response): Promise<void> {
     try {
-      const applications = registrationService.getAllApplications();
+      const applications = registrationService.getAllApplications().map(
+        ({ passwordHash: _passwordHash, ...application }) => application
+      );
       res.status(200).json({
         success: true,
         count: applications.length,

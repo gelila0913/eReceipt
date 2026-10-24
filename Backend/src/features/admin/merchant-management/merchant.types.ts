@@ -11,7 +11,8 @@ export type ApplicationReviewStatus =
   | 'Under Review'
   | 'Approved'
   | 'Additional Information Required'
-  | 'Rejected';
+  | 'Rejected'
+  | 'Suspended';
 
 export interface MerchantApplicationItem {
   ref: string;

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ArrowLeft,
   FileText,
@@ -29,6 +29,16 @@ export const MerchantReview: React.FC<MerchantReviewProps> = ({
 }) => {
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [activePreviewDoc, setActivePreviewDoc] = useState<{ name: string; url: string } | null>(null);
+  const [documentLoading, setDocumentLoading] = useState(false);
+  const [documentError, setDocumentError] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (activePreviewDoc) {
+        URL.revokeObjectURL(activePreviewDoc.url);
+      }
+    };
+  }, [activePreviewDoc]);
 
   if (!application) {
     return (
@@ -45,22 +55,54 @@ export const MerchantReview: React.FC<MerchantReviewProps> = ({
   }
 
   const documentDownloadUrl = `http://localhost:5000/api/admin/merchants/applications/${application.ref}/document`;
-  const documentPreviewUrl =
-    application.documentUrl ||
-    `http://localhost:5000/api/admin/merchants/applications/${application.ref}/document`;
 
-  const handleOpenPreview = (name: string, url: string) => {
-    setActivePreviewDoc({ name, url });
-    setPreviewModalOpen(true);
+  const fetchApplicationDocument = async (): Promise<Blob> => {
+    const token = localStorage.getItem('officer_token');
+    const response = await fetch(documentDownloadUrl, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!response.ok) {
+      throw new Error(`Unable to retrieve document (${response.status}).`);
+    }
+    return response.blob();
   };
 
-  const handleDirectDownload = (docName?: string) => {
-    const a = document.createElement('a');
-    a.href = documentDownloadUrl;
-    a.download = docName || application.uploadedFileName || 'license-document.pdf';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+  const closePreview = () => {
+    setPreviewModalOpen(false);
+    setActivePreviewDoc(null);
+  };
+
+  const handleOpenPreview = async (name: string) => {
+    setDocumentLoading(true);
+    setDocumentError(null);
+    try {
+      const url = URL.createObjectURL(await fetchApplicationDocument());
+      setActivePreviewDoc({ name, url });
+      setPreviewModalOpen(true);
+    } catch (error) {
+      setDocumentError(error instanceof Error ? error.message : 'Unable to preview document.');
+    } finally {
+      setDocumentLoading(false);
+    }
+  };
+
+  const handleDirectDownload = async (docName?: string) => {
+    setDocumentLoading(true);
+    setDocumentError(null);
+    try {
+      const url = URL.createObjectURL(await fetchApplicationDocument());
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = docName || application.uploadedFileName || 'license-document';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      setDocumentError(error instanceof Error ? error.message : 'Unable to download document.');
+    } finally {
+      setDocumentLoading(false);
+    }
   };
 
   return (
@@ -224,10 +266,10 @@ export const MerchantReview: React.FC<MerchantReviewProps> = ({
                     type="button"
                     onClick={() =>
                       handleOpenPreview(
-                        application.uploadedFileName || 'Trade License Document',
-                        documentPreviewUrl
+                        application.uploadedFileName || 'Trade License Document'
                       )
                     }
+                    disabled={documentLoading}
                     className={styles.docPreviewBtn}
                   >
                     <Eye size={15} />
@@ -236,6 +278,7 @@ export const MerchantReview: React.FC<MerchantReviewProps> = ({
                   <button
                     type="button"
                     onClick={() => handleDirectDownload(application.uploadedFileName)}
+                    disabled={documentLoading}
                     className={styles.docDownloadBtn}
                   >
                     <Download size={15} />
@@ -244,6 +287,11 @@ export const MerchantReview: React.FC<MerchantReviewProps> = ({
                 </div>
               </div>
             ) : null}
+            {documentError && (
+              <p role="alert" style={{ color: '#B91C1C', marginTop: '10px' }}>
+                {documentError}
+              </p>
+            )}
 
             {/* Standard Verification Document Badges */}
             <div className={styles.docsGrid}>
@@ -403,7 +451,7 @@ export const MerchantReview: React.FC<MerchantReviewProps> = ({
 
       {/* In-App Document Preview Modal */}
       {previewModalOpen && activePreviewDoc && (
-        <div className={styles.docModalOverlay} onClick={() => setPreviewModalOpen(false)}>
+        <div className={styles.docModalOverlay} onClick={closePreview}>
           <div className={styles.docModal} onClick={(e) => e.stopPropagation()}>
             <div className={styles.docModalHeader}>
               <h3 className={styles.docModalTitle}>
@@ -432,7 +480,7 @@ export const MerchantReview: React.FC<MerchantReviewProps> = ({
                 </a>
                 <button
                   type="button"
-                  onClick={() => setPreviewModalOpen(false)}
+                  onClick={closePreview}
                   className={styles.docModalCloseBtn}
                   aria-label="Close modal"
                 >
@@ -455,4 +503,3 @@ export const MerchantReview: React.FC<MerchantReviewProps> = ({
 };
 
 export default MerchantReview;
-

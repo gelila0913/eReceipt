@@ -48,6 +48,10 @@ export interface BuyerInfo {
 }
 
 export interface ReceiptDraft {
+  merchantId?: string;
+  merchantTin?: string;
+  merchantName?: string;
+  merchantAddress?: string;
   documentType: DocumentType;
   transactionMode: TransactionMode;
   customerName: string;

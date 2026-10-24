@@ -5,7 +5,11 @@ import {
   merchantRegistrationSchema,
   updateMerchantStatusSchema,
 } from "./merchants.schema.js";
-import { requireAuth, requireRole } from "../../middleware/authMiddleware.js";
+import {
+  requireAuth,
+  requireMerchantSelfOrStaff,
+  requireRole,
+} from "../../middleware/authMiddleware.js";
 
 export const merchantsRouter = Router();
 
@@ -27,6 +31,7 @@ merchantsRouter.get(
 merchantsRouter.get(
   "/applications/:id",
   requireAuth,
+  requireRole("officer", "admin"),
   merchantsController.getApplicationById
 );
 
@@ -42,5 +47,6 @@ merchantsRouter.patch(
 merchantsRouter.get(
   "/profile/:id",
   requireAuth,
+  requireMerchantSelfOrStaff,
   merchantsController.getProfile
 );

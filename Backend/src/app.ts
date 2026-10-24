@@ -1,7 +1,5 @@
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 // Fani feature routers
 import { registrationRouter } from './features/merchant-registration/index.js';
@@ -23,9 +21,6 @@ import { settingsRoutes } from './routes/settingsRoutes.js';
 import { taxInvoicePreviewRoutes } from './routes/taxInvoicePreviewRoutes.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 export const app: Application = express();
 
 // Middlewares
@@ -37,10 +32,6 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// Serve uploaded license documents statically
-const uploadsPath = path.resolve(__dirname, '../uploads');
-app.use('/uploads', express.static(uploadsPath));
 
 // Health check endpoints (both /health and /api/health)
 app.get(['/health', '/api/health'], (_req: Request, res: Response) => {

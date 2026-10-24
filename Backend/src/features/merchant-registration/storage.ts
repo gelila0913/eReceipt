@@ -64,6 +64,14 @@ class MerchantApplicationStorage {
     return this.cache.find((item) => item.tin === cleanTin);
   }
 
+  public getByEmail(email: string): StoredMerchantApplication | undefined {
+    this.ensureLoaded();
+    const cleanEmail = email.trim().toLowerCase();
+    return this.cache.find(
+      (item) => item.email?.trim().toLowerCase() === cleanEmail
+    );
+  }
+
   public updatePasswordHash(tin: string, passwordHash: string): void {
     this.ensureLoaded();
     const application = this.getByTin(tin);
@@ -72,6 +80,57 @@ class MerchantApplicationStorage {
     application.passwordHash = passwordHash;
     application.updatedAt = new Date().toISOString();
     this.saveToFile();
+  }
+
+  public updateForReverification(
+    tin: string,
+    updates: Partial<
+      Pick<
+        StoredMerchantApplication,
+        | 'fullName'
+        | 'phoneNumber'
+        | 'sellerLegalName'
+        | 'tradeName'
+        | 'businessLicenseNumber'
+        | 'city'
+        | 'subCity'
+        | 'buildingName'
+        | 'floor'
+        | 'gpsLocation'
+      >
+    >,
+    document?: Express.Multer.File
+  ): StoredMerchantApplication | null {
+    this.ensureLoaded();
+    const application = this.getByTin(tin);
+    if (!application) return null;
+
+    const changedFields = Object.keys(updates).filter(
+      (field) => updates[field as keyof typeof updates] !== undefined
+    );
+    Object.assign(application, updates);
+
+    if (document) {
+      application.documentPath = document.path;
+      application.uploadedFileName = document.originalname;
+      application.uploadedFileSize = `${(document.size / (1024 * 1024)).toFixed(1)} MB`;
+    }
+
+    const submittedAt = new Date().toISOString();
+    application.status = 'Under Review';
+    application.reviewNotes = 'Updated merchant information submitted for re-verification.';
+    application.verificationHistory = [
+      ...(application.verificationHistory || []),
+      {
+        submittedAt,
+        changedFields,
+        documentName: document?.originalname,
+      },
+    ];
+    application.updatedAt = submittedAt;
+
+    this.saveToFile();
+    return application;
   }
 
   public getByPhone(phoneNumber: string): StoredMerchantApplication | undefined {

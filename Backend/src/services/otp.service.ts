@@ -314,7 +314,10 @@ class OtpService {
     // Code matches and valid: clear active OTP so it cannot be reused
     this.otpCache.delete(key);
     this.persistStore();
-    if (purpose === 'merchant_registration') {
+    if (
+      purpose === 'merchant_registration' ||
+      purpose === 'merchant_password_reset'
+    ) {
       this.verifiedEmails.set(key, Date.now() + this.EXPIRY_MINUTES * 60 * 1000);
     }
 
@@ -342,6 +345,53 @@ class OtpService {
     const expiresAt = this.verifiedEmails.get(key);
     this.verifiedEmails.delete(key);
     return expiresAt !== undefined && expiresAt > Date.now();
+  }
+
+  public async sendMerchantStatusNotification(input: {
+    email: string;
+    recipientName: string;
+    referenceNumber: string;
+    status: string;
+    reason?: string;
+  }): Promise<boolean> {
+    this.initResend();
+    if (!this.resendClient) {
+      if (config.nodeEnv === 'production') {
+        throw new Error('Merchant decision email delivery is not configured.');
+      }
+      console.warn(
+        `Merchant decision notification was not sent for ${input.referenceNumber}: Resend is not configured.`
+      );
+      return false;
+    }
+
+    const escapeHtml = (value: string): string =>
+      value.replace(/[&<>"']/g, (character) => {
+        const entities: Record<string, string> = {
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#39;',
+        };
+        return entities[character];
+      });
+
+    const safeName = escapeHtml(input.recipientName);
+    const safeStatus = escapeHtml(input.status);
+    const safeReference = escapeHtml(input.referenceNumber);
+    const safeReason = escapeHtml(input.reason || 'No additional reason was provided.');
+    const response = await this.resendClient.emails.send({
+      from: process.env.RESEND_FROM_EMAIL || 'eReceipt Tax Portal <onboarding@resend.dev>',
+      to: input.email,
+      subject: `eReceipt merchant application update: ${input.status}`,
+      html: `<p>Hello ${safeName},</p><p>Your merchant application <strong>${safeReference}</strong> is now <strong>${safeStatus}</strong>.</p><p>${safeReason}</p>`,
+    });
+
+    if (response.error) {
+      throw new Error(`Resend rejected the application notification: ${response.error.message}`);
+    }
+    return true;
   }
 }
 

@@ -84,13 +84,6 @@ export class MerchantManagementStorage {
     const merchantId = `MER-${app.tin.slice(-5) || app.referenceNumber.slice(-5)}`;
     const address = [app.city, app.subCity, app.buildingName, app.floor].filter(Boolean).join(', ');
 
-    const diskFilename = app.documentPath ? path.basename(app.documentPath) : undefined;
-    const documentUrl = diskFilename
-      ? `http://localhost:5000/uploads/licenses/${diskFilename}`
-      : app.uploadedFileName
-      ? `http://localhost:5000/uploads/licenses/${app.uploadedFileName}`
-      : undefined;
-
     return {
       ref: app.referenceNumber,
       registrationId: app.id,
@@ -112,7 +105,6 @@ export class MerchantManagementStorage {
       gpsLocation: app.gpsLocation,
       uploadedFileName: app.uploadedFileName,
       uploadedFileSize: app.uploadedFileSize,
-      documentUrl,
       decisionReason: app.reviewNotes,
       reviewedBy: app.reviewedBy,
       reviewedAt: app.reviewedAt,

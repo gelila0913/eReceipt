@@ -122,10 +122,15 @@ class Database {
   public getAllReceipts(options?: {
     search?: string;
     documentType?: string;
+    merchantTin?: string;
     limit?: number;
     offset?: number;
   }): { receipts: IssuedReceipt[]; total: number } {
     let list = [...this.receipts];
+
+    if (options?.merchantTin) {
+      list = list.filter((receipt) => receipt.merchantTin === options.merchantTin);
+    }
 
     if (options?.documentType) {
       list = list.filter((r) => r.documentType === options.documentType);

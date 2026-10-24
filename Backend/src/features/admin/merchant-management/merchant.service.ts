@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { merchantManagementStorage } from './merchant.storage.js';
+import { applicationStorage } from '../../merchant-registration/storage.js';
 import type {
   MerchantApplicationItem,
   DirectoryMerchantItem,
@@ -10,6 +11,7 @@ import type {
   DirectoryQuery,
   ApplicationReviewStatus,
 } from './merchant.types.js';
+import { otpService } from '../../../services/otp.service.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -83,6 +85,8 @@ export class MerchantManagementService {
     application: MerchantApplicationItem;
     directoryRecord?: DirectoryMerchantItem;
     message: string;
+    notificationSent: boolean;
+    notificationWarning?: string;
   }> {
     const current = merchantManagementStorage.getApplicationByRef(ref);
     if (!current) {
@@ -110,6 +114,9 @@ export class MerchantManagementService {
         break;
       default:
         throw new Error(`Invalid decision kind "${payload.kind}". Must be 'approve', 'request', or 'reject'.`);
+    }
+    if (payload.kind === 'reject' && !payload.reason.trim()) {
+      throw new Error('A reason is required when rejecting a merchant application.');
     }
 
     const previousStatus = current.status;
@@ -161,10 +168,33 @@ export class MerchantManagementService {
       notes: reason,
     });
 
+    const registration = applicationStorage.getByReference(ref);
+    let notificationSent = false;
+    let notificationWarning: string | undefined;
+    if (registration?.email) {
+      try {
+        notificationSent = await otpService.sendMerchantStatusNotification({
+          email: registration.email,
+          recipientName: registration.fullName,
+          referenceNumber: ref,
+          status: nextStatus,
+          reason,
+        });
+      } catch (error) {
+        notificationWarning =
+          error instanceof Error ? error.message : 'Merchant notification delivery failed.';
+        console.error(`Application ${ref} was updated but notification delivery failed:`, error);
+      }
+    } else {
+      notificationWarning = 'No merchant email address is available for notification.';
+    }
+
     return {
       application: updatedApplication,
       directoryRecord,
       message: `Application ${ref} successfully updated to "${nextStatus}".`,
+      notificationSent,
+      notificationWarning,
     };
   }
 
@@ -198,6 +228,32 @@ export class MerchantManagementService {
     const updated = merchantManagementStorage.updateDirectoryStatus(id, status);
     if (!updated) {
       throw new Error(`Merchant "${id}" not found.`);
+    }
+
+    const application = applicationStorage.getByTin(updated.tin);
+    if (application) {
+      applicationStorage.updateStatus(
+        application.referenceNumber,
+        status === 'Suspended' ? 'Suspended' : 'Approved',
+        officerName,
+        reason
+      );
+      if (application.email) {
+        try {
+          await otpService.sendMerchantStatusNotification({
+            email: application.email,
+            recipientName: application.fullName,
+            referenceNumber: application.referenceNumber,
+            status: status === 'Suspended' ? 'Suspended' : 'Approved',
+            reason,
+          });
+        } catch (error) {
+          console.error(
+            `Merchant ${application.referenceNumber} status changed but email notification failed:`,
+            error
+          );
+        }
+      }
     }
 
     // Log status change

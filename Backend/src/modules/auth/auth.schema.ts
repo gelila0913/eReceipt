@@ -15,5 +15,23 @@ export const officerLoginSchema = z.object({
   rememberOfficer: z.boolean().optional(),
 });
 
+export const merchantPasswordResetRequestSchema = z.object({
+  email: z.string().email("A valid email address is required."),
+});
+
+export const merchantPasswordResetSchema = z.object({
+  email: z.string().email("A valid email address is required."),
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters long.")
+    .max(128, "Password must not exceed 128 characters."),
+});
+
 export type MerchantLoginInput = z.infer<typeof merchantLoginSchema>;
 export type OfficerLoginInput = z.infer<typeof officerLoginSchema>;
+export type MerchantPasswordResetRequestInput = z.infer<
+  typeof merchantPasswordResetRequestSchema
+>;
+export type MerchantPasswordResetInput = z.infer<
+  typeof merchantPasswordResetSchema
+>;

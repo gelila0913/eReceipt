@@ -2,7 +2,10 @@ import { Router } from "express";
 import { receiptsController } from "./receipts.controller.js";
 import { validateRequest } from "../../middleware/validateRequest.js";
 import { createReceiptSchema, voidReceiptSchema } from "./receipts.schema.js";
-import { requireAuth } from "../../middleware/authMiddleware.js";
+import {
+  requireAuth,
+  requireApprovedMerchant,
+} from "../../middleware/authMiddleware.js";
 
 export const receiptsRouter = Router();
 
@@ -16,6 +19,7 @@ receiptsRouter.get(
 receiptsRouter.post(
   "/",
   requireAuth,
+  requireApprovedMerchant,
   validateRequest({ body: createReceiptSchema }),
   receiptsController.createReceipt
 );
@@ -35,6 +39,7 @@ receiptsRouter.get(
 receiptsRouter.post(
   "/:id/void",
   requireAuth,
+  requireApprovedMerchant,
   validateRequest({ body: voidReceiptSchema }),
   receiptsController.voidReceipt
 );

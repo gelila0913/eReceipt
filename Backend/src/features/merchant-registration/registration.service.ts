@@ -1,9 +1,11 @@
 import { applicationStorage } from './storage.js';
 import { hashPassword } from './password.js';
 import { otpService } from '../../services/otp.service.js';
+import { randomBytes } from 'node:crypto';
 import type {
   MerchantRegistrationInput,
   StoredMerchantApplication,
+  MerchantReverificationInput,
   TinCheckResult,
   RegistrationSubmissionResult,
   RegistrationStatusResult,
@@ -11,8 +13,11 @@ import type {
 
 function generateReferenceNumber(): string {
   const year = new Date().getFullYear();
-  const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-  return `APP-${year}-${randomSuffix}`;
+  let referenceNumber: string;
+  do {
+    referenceNumber = `APP-${year}-${randomBytes(6).toString('hex').toUpperCase()}`;
+  } while (applicationStorage.getByReference(referenceNumber));
+  return referenceNumber;
 }
 
 export class MerchantRegistrationService {
@@ -40,7 +45,7 @@ export class MerchantRegistrationService {
         tin,
         validFormat: true,
         isAvailable: false,
-        message: `TIN ${tin} is already associated with application ${existing.referenceNumber} (${existing.sellerLegalName}).`,
+        message: 'This TIN is already associated with a merchant application.',
       };
     }
 
@@ -67,6 +72,9 @@ export class MerchantRegistrationService {
     const email = input.email?.trim().toLowerCase();
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       throw new Error('A valid email address is required.');
+    }
+    if (applicationStorage.getByEmail(email)) {
+      throw new Error('This email address is already associated with a merchant account.');
     }
 
     if (
@@ -150,6 +158,41 @@ export class MerchantRegistrationService {
     };
   }
 
+  public submitReverification(
+    tin: string,
+    input: MerchantReverificationInput,
+    uploadedFile?: Express.Multer.File
+  ): { referenceNumber: string; status: 'Under Review'; submittedAt: string } {
+    const updates = Object.fromEntries(
+      Object.entries(input).map(([key, value]) => [
+        key,
+        typeof value === 'string' ? value.trim() : value,
+      ])
+    ) as MerchantReverificationInput;
+    if (!Object.values(updates).some((value) => value !== undefined) && !uploadedFile) {
+      throw new Error('Provide updated merchant information or a replacement document.');
+    }
+
+    const application = applicationStorage.getByTin(tin);
+    if (!application) {
+      throw new Error('Merchant registration was not found.');
+    }
+    if (!['Approved', 'Suspended', 'Additional Information Required'].includes(application.status)) {
+      throw new Error('This merchant application is not eligible for re-verification.');
+    }
+
+    const updated = applicationStorage.updateForReverification(tin, updates, uploadedFile);
+    if (!updated) {
+      throw new Error('Merchant registration could not be updated.');
+    }
+
+    return {
+      referenceNumber: updated.referenceNumber,
+      status: 'Under Review',
+      submittedAt: updated.updatedAt,
+    };
+  }
+
   /**
    * Retrieves live status of a submitted application for WorkflowPipelineStepper
    */
@@ -164,7 +207,11 @@ export class MerchantRegistrationService {
     let stage = 1; // 1 = Submitted
     if (app.status === 'Under Review' || app.status === 'Additional Information Required') {
       stage = 2;
-    } else if (app.status === 'Approved' || app.status === 'Rejected') {
+    } else if (
+      app.status === 'Approved' ||
+      app.status === 'Rejected' ||
+      app.status === 'Suspended'
+    ) {
       stage = 3;
     }
 

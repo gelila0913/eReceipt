@@ -67,9 +67,21 @@ export class MerchantManagementController {
       }
 
       let filePath = rawApp.documentPath;
+      const uploadDirectory = path.resolve(__dirname, '../../../../uploads/licenses');
+      if (
+        filePath &&
+        !filePath.startsWith(`${uploadDirectory}${path.sep}`)
+      ) {
+        res.status(400).json({ success: false, error: 'Stored document path is invalid.' });
+        return;
+      }
       if (!filePath || !fs.existsSync(filePath)) {
         if (rawApp.uploadedFileName) {
-          const fallbackPath = path.resolve(__dirname, '../../../../uploads/licenses', rawApp.uploadedFileName);
+          const fallbackPath = path.resolve(uploadDirectory, rawApp.uploadedFileName);
+          if (!fallbackPath.startsWith(`${uploadDirectory}${path.sep}`)) {
+            res.status(400).json({ success: false, error: 'Stored document path is invalid.' });
+            return;
+          }
           if (fs.existsSync(fallbackPath)) {
             filePath = fallbackPath;
           }
@@ -114,8 +126,8 @@ export class MerchantManagementController {
 
       const result = await merchantManagementService.submitDecision(ref, {
         kind,
-        reason: reason || '',
-        officerName: activeOfficer || 'Revenue Compliance Officer',
+        reason: typeof reason === 'string' ? reason.trim() : '',
+        officerName: req.user?.name || activeOfficer || 'Revenue Compliance Officer',
       });
 
       res.status(200).json({
@@ -192,11 +204,18 @@ export class MerchantManagementController {
         });
         return;
       }
+      if (status === 'Suspended' && (!reason || !String(reason).trim())) {
+        res.status(400).json({
+          success: false,
+          error: 'A reason is required when suspending a merchant.',
+        });
+        return;
+      }
 
       const updated = await merchantManagementService.updateStatus(
         id,
         status,
-        officerName,
+        req.user?.name || officerName,
         reason
       );
 

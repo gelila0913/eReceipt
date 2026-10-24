@@ -11,7 +11,8 @@ export interface MerchantAuthResponse {
       | "Under Review"
       | "Approved"
       | "Rejected"
-      | "Additional Information Required";
+      | "Additional Information Required"
+      | "Suspended";
   };
 }
 

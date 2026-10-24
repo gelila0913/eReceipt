@@ -1,8 +1,34 @@
 import { Router } from 'express';
 import { registrationController } from './registration.controller.js';
 import { licenseUpload } from './upload.middleware.js';
+import { requireOfficerSession } from '../../middleware/requireOfficerSession.js';
+import { requireAuth, requireRole } from '../../middleware/authMiddleware.js';
+import { z } from 'zod';
+import { validateRequest } from '../../middleware/validateRequest.js';
 
 export const registrationRouter = Router();
+
+const reverificationSchema = z.object({
+  fullName: z.string().min(2).optional(),
+  phoneNumber: z.string().min(9).optional(),
+  sellerLegalName: z.string().min(2).optional(),
+  tradeName: z.string().min(2).optional(),
+  businessLicenseNumber: z.string().min(3).optional(),
+  city: z.string().min(2).optional(),
+  subCity: z.string().min(2).optional(),
+  buildingName: z.string().min(2).optional(),
+  floor: z.string().optional(),
+  gpsLocation: z.string().optional(),
+}).strict();
+
+registrationRouter.post(
+  '/reverify',
+  requireAuth,
+  requireRole('merchant'),
+  licenseUpload.single('document'),
+  validateRequest({ body: reverificationSchema }),
+  (req, res) => registrationController.submitReverification(req, res)
+);
 
 // 1. Submit complete 5-step registration (accepts JSON or multipart file attachment)
 registrationRouter.post(
@@ -33,5 +59,6 @@ registrationRouter.get(
 // 5. Get all applications (for Revenue Admin portal review)
 registrationRouter.get(
   '/applications',
+  requireOfficerSession,
   (req, res) => registrationController.getAllApplications(req, res)
 );

@@ -2,6 +2,8 @@ import type { Request, Response } from 'express';
 import { ReceiptService } from '../services/receiptService.js';
 import { calculateTaxes } from '../services/taxCalculationService.js';
 import type { ReceiptDraft } from '../models/types.js';
+import { applicationStorage } from '../features/merchant-registration/storage.js';
+import { ForbiddenError } from '../common/errors.js';
 
 export class ReceiptController {
   /**
@@ -9,7 +11,24 @@ export class ReceiptController {
    */
   public static async issue(req: Request, res: Response): Promise<void> {
     try {
-      const draft = req.body as ReceiptDraft;
+      if (!req.user || req.user.role !== 'merchant') {
+        throw new ForbiddenError('Only authenticated merchants may issue receipts.');
+      }
+
+      const merchant = applicationStorage.getByTin(req.user.identifier);
+      if (!merchant) {
+        throw new ForbiddenError('Merchant registration was not found.');
+      }
+
+      const draft = {
+        ...req.body,
+        merchantId: `MER-${merchant.tin.slice(-5)}`,
+        merchantTin: merchant.tin,
+        merchantName: merchant.sellerLegalName,
+        merchantAddress: [merchant.buildingName, merchant.subCity, merchant.city]
+          .filter(Boolean)
+          .join(', '),
+      } as ReceiptDraft;
 
       if (!draft) {
         res.status(400).json({ error: 'Receipt payload is required in body.' });
@@ -74,6 +93,7 @@ export class ReceiptController {
       const result = ReceiptService.getReceipts({
         search: typeof search === 'string' ? search : undefined,
         documentType: typeof documentType === 'string' ? documentType : undefined,
+        merchantTin: req.user?.role === 'merchant' ? req.user.identifier : undefined,
         limit: limit ? parseInt(limit as string, 10) : 50,
         offset: offset ? parseInt(offset as string, 10) : 0,
       });
@@ -99,6 +119,13 @@ export class ReceiptController {
 
       if (!receipt) {
         res.status(404).json({ error: `Receipt with ID/IRN "${id}" not found.` });
+        return;
+      }
+      if (
+        req.user?.role === 'merchant' &&
+        receipt.merchantTin !== req.user.identifier
+      ) {
+        res.status(403).json({ error: 'Merchants may only access their own receipts.' });
         return;
       }
 

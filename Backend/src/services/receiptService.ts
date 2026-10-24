@@ -97,6 +97,7 @@ export class ReceiptService {
   public static getReceipts(options?: {
     search?: string;
     documentType?: string;
+    merchantTin?: string;
     limit?: number;
     offset?: number;
   }) {

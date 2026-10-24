@@ -21,6 +21,36 @@ export class AuthController {
     }
   }
 
+  async requestMerchantPasswordReset(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      await authService.requestMerchantPasswordReset(req.body);
+      sendSuccess(
+        res,
+        null,
+        "If the verified merchant email matches an account, a reset code has been sent."
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async resetMerchantPassword(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      await authService.resetMerchantPassword(req.body);
+      sendSuccess(res, null, "Merchant password updated successfully.");
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getCurrentUser(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       sendSuccess(res, req.user || null, "Current user retrieved");

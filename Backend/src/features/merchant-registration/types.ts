@@ -3,7 +3,8 @@ export type ApplicationStatus =
   | 'Under Review'
   | 'Approved'
   | 'Rejected'
-  | 'Additional Information Required';
+  | 'Additional Information Required'
+  | 'Suspended';
 
 export interface MerchantRegistrationInput {
   // Step 1: Account details
@@ -73,9 +74,30 @@ export interface StoredMerchantApplication {
   reviewedBy?: string;
   reviewNotes?: string;
   reviewedAt?: string;
+  verificationHistory?: Array<{
+    submittedAt: string;
+    changedFields: string[];
+    documentName?: string;
+  }>;
   createdAt: string;
   updatedAt: string;
 }
+
+export type MerchantReverificationInput = Partial<
+  Pick<
+    MerchantRegistrationInput,
+    | 'fullName'
+    | 'phoneNumber'
+    | 'sellerLegalName'
+    | 'tradeName'
+    | 'businessLicenseNumber'
+    | 'city'
+    | 'subCity'
+    | 'buildingName'
+    | 'floor'
+    | 'gpsLocation'
+  >
+>;
 
 export interface TinCheckResult {
   tin: string;

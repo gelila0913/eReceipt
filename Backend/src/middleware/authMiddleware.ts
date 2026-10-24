@@ -2,6 +2,8 @@ import { Request, Response, NextFunction } from "express";
 import { UnauthorizedError, ForbiddenError } from "../common/errors.js";
 import { verifyAuthToken } from "../common/authToken.js";
 import { config } from "../config/index.js";
+import { applicationStorage } from "../features/merchant-registration/storage.js";
+import { merchantManagementStorage } from "../features/admin/merchant-management/merchant.storage.js";
 
 export type UserRole = "merchant" | "officer" | "admin";
 
@@ -83,4 +85,49 @@ export function requireRole(...allowedRoles: UserRole[]) {
 
     next();
   };
+}
+
+export function requireMerchantSelfOrStaff(
+  req: Request,
+  _res: Response,
+  next: NextFunction
+): void {
+  if (!req.user) {
+    throw new UnauthorizedError("User is not authenticated.");
+  }
+
+  if (
+    req.user.role === "merchant" &&
+    req.params.id !== req.user.identifier
+  ) {
+    throw new ForbiddenError("Merchants may only access their own profile.");
+  }
+
+  next();
+}
+
+export function requireApprovedMerchant(
+  req: Request,
+  _res: Response,
+  next: NextFunction
+): void {
+  if (!req.user || req.user.role !== "merchant") {
+    throw new ForbiddenError("Only authenticated merchants may issue receipts.");
+  }
+
+  const application = applicationStorage.getByTin(req.user.identifier);
+  const directoryEntry = merchantManagementStorage.getDirectoryMerchantById(
+    req.user.identifier
+  );
+  if (
+    !application ||
+    application.status !== "Approved" ||
+    directoryEntry?.status === "Suspended"
+  ) {
+    throw new ForbiddenError(
+      "Only approved, active merchants may use the invoicing workflow."
+    );
+  }
+
+  next();
 }
