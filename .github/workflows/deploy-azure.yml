@@ -1,4 +1,4 @@
-name: Build and Deploy to Azure Container Apps
+name: CI/CD Pipeline - Build, Test & Deploy to Azure
 
 on:
   push:
@@ -12,25 +12,95 @@ permissions:
   contents: read
 
 jobs:
-  build-and-deploy:
+  # ----------------------------------------------------------------------------
+  # Job 1: Test & Validate Code (CI)
+  # ----------------------------------------------------------------------------
+  validate:
+    name: Lint & Build Validation
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Log in to Azure Container Registry
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: |
+            Backend/package-lock.json
+            Frontend/ereceipt/package-lock.json
+
+      - name: Build & Validate Backend
+        run: |
+          cd Backend
+          npm ci
+          npm run build
+
+      - name: Build & Validate Frontend
+        run: |
+          cd Frontend/ereceipt
+          npm ci
+          npm run build
+
+  # ----------------------------------------------------------------------------
+  # Job 2: Build & Push Docker Containers, then Deploy to Azure (CD)
+  # ----------------------------------------------------------------------------
+  deploy:
+    name: Build Containers & Deploy to Azure
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to Azure Container Registry (ACR)
         uses: azure/docker-login@v1
         with:
           login-server: ${{ secrets.AZURE_ACR_LOGIN_SERVER }}
           username: ${{ secrets.AZURE_ACR_USERNAME }}
           password: ${{ secrets.AZURE_ACR_PASSWORD }}
 
-      - name: Build and Push Backend Image
-        run: |
-          docker build -t ${{ secrets.AZURE_ACR_LOGIN_SERVER }}/ereceipt-backend:latest ./Backend
-          docker push ${{ secrets.AZURE_ACR_LOGIN_SERVER }}/ereceipt-backend:latest
+      - name: Set Image Tag
+        id: vars
+        run: echo "SHA_TAG=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
 
-      - name: Build and Push Frontend Image
+      - name: Build and Push Backend Docker Image
         run: |
-          docker build -t ${{ secrets.AZURE_ACR_LOGIN_SERVER }}/ereceipt-frontend:latest ./Frontend/ereceipt
+          docker build \
+            -t ${{ secrets.AZURE_ACR_LOGIN_SERVER }}/ereceipt-backend:latest \
+            -t ${{ secrets.AZURE_ACR_LOGIN_SERVER }}/ereceipt-backend:${{ steps.vars.outputs.SHA_TAG }} \
+            ./Backend
+          docker push ${{ secrets.AZURE_ACR_LOGIN_SERVER }}/ereceipt-backend:latest
+          docker push ${{ secrets.AZURE_ACR_LOGIN_SERVER }}/ereceipt-backend:${{ steps.vars.outputs.SHA_TAG }}
+
+      - name: Build and Push Frontend Docker Image
+        run: |
+          docker build \
+            --build-arg VITE_API_BASE_URL="${{ secrets.BACKEND_API_URL || 'https://backend.salmonwater-89ba5a67.southafricanorth.azurecontainerapps.io' }}" \
+            -t ${{ secrets.AZURE_ACR_LOGIN_SERVER }}/ereceipt-frontend:latest \
+            -t ${{ secrets.AZURE_ACR_LOGIN_SERVER }}/ereceipt-frontend:${{ steps.vars.outputs.SHA_TAG }} \
+            ./Frontend/ereceipt
           docker push ${{ secrets.AZURE_ACR_LOGIN_SERVER }}/ereceipt-frontend:latest
+          docker push ${{ secrets.AZURE_ACR_LOGIN_SERVER }}/ereceipt-frontend:${{ steps.vars.outputs.SHA_TAG }}
+
+      - name: Log in to Azure CLI
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy to Azure Container Apps
+        run: |
+          echo "Updating live Backend container..."
+          az containerapp update \
+            --name backend \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP || 'rg-ereceipt-prod' }} \
+            --image ${{ secrets.AZURE_ACR_LOGIN_SERVER }}/ereceipt-backend:${{ steps.vars.outputs.SHA_TAG }}
+
+          echo "Updating live Frontend container..."
+          az containerapp update \
+            --name ereceipt-frontend \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP || 'rg-ereceipt-prod' }} \
+            --image ${{ secrets.AZURE_ACR_LOGIN_SERVER }}/ereceipt-frontend:${{ steps.vars.outputs.SHA_TAG }}
+
+          echo "🚀 CI/CD Deployment succeeded! Both containers are now updated."
