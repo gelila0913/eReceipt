@@ -3,6 +3,7 @@ import {
   Landmark,
   Check,
   CheckCircle2,
+  ArrowLeft,
   Share2,
   Download,
   Printer,
@@ -340,6 +341,15 @@ export const TaxInvoicePreview: React.FC<TaxInvoicePreviewProps> = ({ onNavigate
       {/* Page Header */}
       <header className={styles.headerRow}>
         <div className={styles.headerLeft}>
+          <button
+            type="button"
+            onClick={() => (onNavigate ? onNavigate('sales') : window.history.back())}
+            className={styles.backBtn}
+            title={language === 'en' ? 'Back to Sales ledger' : 'ወደ ሽያጭ ዝርዝር ተመለስ'}
+          >
+            <ArrowLeft size={16} />
+            <span>{language === 'en' ? 'Back to Sales' : 'ወደ ሽያጭ ተመለስ'}</span>
+          </button>
           <div className={styles.successPill}>
             <CheckCircle2 size={15} strokeWidth={2.5} />
             <span>Submitted successfully · EIMS HTTP 200</span>

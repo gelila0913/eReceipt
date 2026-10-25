@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   X,
+  ArrowLeft,
   CheckCircle2,
   Landmark,
   Store,
@@ -39,12 +40,14 @@ interface IssuedReceiptModalProps {
   receipt: IssuedReceipt;
   onClose: () => void;
   onReset: () => void;
+  onBack?: () => void;
 }
 
 export const IssuedReceiptModal: React.FC<IssuedReceiptModalProps> = ({
   receipt,
   onClose,
   onReset,
+  onBack,
 }) => {
   const [language, setLanguage] = useState<'en' | 'am'>('en');
   const [copied, setCopied] = useState(false);
@@ -252,15 +255,35 @@ export const IssuedReceiptModal: React.FC<IssuedReceiptModalProps> = ({
     setTimeout(() => printWindow.print(), 350);
   };
 
+  const handleGoBack = () => {
+    if (onBack) {
+      onBack();
+    } else {
+      onClose();
+    }
+  };
+
   return (
     <div className={styles.backdrop} role="dialog" aria-modal="true">
       <div className={styles.modalContent}>
         <div className={styles.modalHeader}>
-          <div className={styles.modalTitleGroup}>
-            <h2 className={styles.modalTitle}>Tax invoice clearance record</h2>
-            <span className={styles.clearedPill}>
-              <CheckCircle2 size={14} /> MoR Cleared
-            </span>
+          <div className={styles.modalHeaderLeft}>
+            <button
+              type="button"
+              onClick={handleGoBack}
+              className={styles.modalBackBtn}
+              title="Go back"
+              aria-label="Go back"
+            >
+              <ArrowLeft size={18} />
+              <span>Back</span>
+            </button>
+            <div className={styles.modalTitleGroup}>
+              <h2 className={styles.modalTitle}>Tax invoice clearance record</h2>
+              <span className={styles.clearedPill}>
+                <CheckCircle2 size={14} /> MoR Cleared
+              </span>
+            </div>
           </div>
 
           <div className={styles.modalTabs}>
@@ -680,6 +703,15 @@ export const IssuedReceiptModal: React.FC<IssuedReceiptModalProps> = ({
           </div>
 
           <div className={styles.footerRight}>
+            <button
+              type="button"
+              onClick={handleGoBack}
+              className={styles.backActionBtn}
+              title="Go back"
+            >
+              <ArrowLeft size={16} />
+              <span>Go Back</span>
+            </button>
             <button
               type="button"
               onClick={() => {

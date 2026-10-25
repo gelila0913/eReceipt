@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Wifi, CheckCircle2, RotateCcw } from 'lucide-react';
+import { Wifi, CheckCircle2, RotateCcw, ArrowLeft } from 'lucide-react';
 import DashboardLayout from '../../layouts/DashboardLayout/DashboardLayout';
 import DocumentClassificationCard from './components/DocumentClassificationCard';
 import BuyerDetailsCard from './components/BuyerDetailsCard';
@@ -81,7 +81,7 @@ function generateFiscalClearanceData(date: Date, merchantCode: string = 'MCH-01'
   };
 }
 
-export const ReceiptIssuanceContent: React.FC<ReceiptIssuanceProps> = () => {
+export const ReceiptIssuanceContent: React.FC<ReceiptIssuanceProps> = ({ onNavigate }) => {
   const [documentType, setDocumentType] = useState<DocumentType>(
     'Electronic Tax Invoice (VAT Invoice)'
   );
@@ -388,13 +388,24 @@ export const ReceiptIssuanceContent: React.FC<ReceiptIssuanceProps> = () => {
   return (
     <>
       <div className={styles.pageHead}>
-        <div>
-          <p className={styles.eyebrow}>MoR EIMS real-time clearance</p>
-          <h1 className={styles.title}>Issue a receipt</h1>
-          <p className={styles.copy}>
-            Capture the transaction, validate taxpayer data, and submit it to the Ministry of
-            Revenues before issue.
-          </p>
+        <div className={styles.pageHeadLeft}>
+          <button
+            type="button"
+            onClick={() => (onNavigate ? onNavigate('dashboard') : window.history.back())}
+            className={styles.backNavBtn}
+            title="Return to Dashboard"
+          >
+            <ArrowLeft size={16} />
+            <span>Back to Dashboard</span>
+          </button>
+          <div>
+            <p className={styles.eyebrow}>MoR EIMS real-time clearance</p>
+            <h1 className={styles.title}>Issue a receipt</h1>
+            <p className={styles.copy}>
+              Capture the transaction, validate taxpayer data, and submit it to the Ministry of
+              Revenues before issue.
+            </p>
+          </div>
         </div>
 
         <div className={styles.headerActionsGroup}>
@@ -505,6 +516,13 @@ export const ReceiptIssuanceContent: React.FC<ReceiptIssuanceProps> = () => {
           receipt={issuedReceipt}
           onClose={() => setIssuedReceipt(null)}
           onReset={handleReset}
+          onBack={() => {
+            setIssuedReceipt(null);
+            handleReset();
+            if (onNavigate) {
+              onNavigate('dashboard');
+            }
+          }}
         />
       )}
 

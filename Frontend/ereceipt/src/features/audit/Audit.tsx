@@ -32,7 +32,8 @@ function downloadCsv(filename: string, rows: string[][]) {
 export const Audit: React.FC<AuditProps> = ({ initialScreen = 'dashboard', onNavigate }) => {
   const [activeScreen, setActiveScreen] = useState<string>(initialScreen);
   const [settingsTab, setSettingsTab] = useState<SettingsTabId>(() => {
-    const saved = window.sessionStorage.getItem('ereceipt_settings_tab') as SettingsTabId | null;
+    const saved = (window.localStorage.getItem('ereceipt_settings_tab') ||
+      window.sessionStorage.getItem('ereceipt_settings_tab')) as SettingsTabId | null;
     return saved && ['profile', 'preferences', 'notifications', 'security'].includes(saved)
       ? saved
       : 'profile';
@@ -40,7 +41,10 @@ export const Audit: React.FC<AuditProps> = ({ initialScreen = 'dashboard', onNav
 
   const handleSettingsTabChange = (tab: SettingsTabId) => {
     setSettingsTab(tab);
-    window.sessionStorage.setItem('ereceipt_settings_tab', tab);
+    try {
+      window.localStorage.setItem('ereceipt_settings_tab', tab);
+      window.sessionStorage.setItem('ereceipt_settings_tab', tab);
+    } catch {}
   };
 
   // Authenticated merchant isolation
@@ -51,7 +55,10 @@ export const Audit: React.FC<AuditProps> = ({ initialScreen = 'dashboard', onNav
   useEffect(() => {
     if (initialScreen) {
       setActiveScreen(initialScreen);
-      window.sessionStorage.setItem('ereceipt_active_screen', initialScreen);
+      try {
+        window.localStorage.setItem('ereceipt_active_screen', initialScreen);
+        window.sessionStorage.setItem('ereceipt_active_screen', initialScreen);
+      } catch {}
     }
   }, [initialScreen]);
 
@@ -129,20 +136,30 @@ export const Audit: React.FC<AuditProps> = ({ initialScreen = 'dashboard', onNav
       return;
     }
     if (screen === 'signin' || screen === 'login' || screen === 'signout' || screen === 'logout') {
-      window.sessionStorage.removeItem('ereceipt_active_screen');
-      onNavigate?.('signin');
+      try {
+        window.localStorage.removeItem('ereceipt_active_screen');
+        window.localStorage.removeItem('ereceipt_active_view');
+        window.sessionStorage.removeItem('ereceipt_active_screen');
+        window.sessionStorage.removeItem('ereceipt_active_view');
+      } catch {}
+      onNavigate?.(screen === 'signout' || screen === 'logout' ? 'signout' : 'signin');
       return;
     }
     if (screen === 'landing' || screen === 'home') {
-      window.sessionStorage.removeItem('ereceipt_active_screen');
+      try {
+        window.localStorage.setItem('ereceipt_active_view', 'landing');
+        window.sessionStorage.setItem('ereceipt_active_view', 'landing');
+      } catch {}
       onNavigate?.('landing');
       return;
     }
     const resolvedScreen = screen === 'receipt-issuance' ? 'pos' : screen;
     setActiveScreen(resolvedScreen);
-    window.sessionStorage.setItem('ereceipt_active_screen', resolvedScreen);
-    window.sessionStorage.setItem('ereceipt_active_view', 'merchant');
     try {
+      window.localStorage.setItem('ereceipt_active_screen', resolvedScreen);
+      window.localStorage.setItem('ereceipt_active_view', 'merchant');
+      window.sessionStorage.setItem('ereceipt_active_screen', resolvedScreen);
+      window.sessionStorage.setItem('ereceipt_active_view', 'merchant');
       window.history.replaceState(
         { view: 'merchant', screen: resolvedScreen },
         '',

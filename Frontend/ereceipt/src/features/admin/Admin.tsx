@@ -50,7 +50,30 @@ export const Admin: React.FC<AdminProps> = ({ onReturnToMerchant }) => {
     }
   });
 
-  const [page, setPage] = useState<AdminPage>('overview');
+  const [page, setPage] = useState<AdminPage>(() => {
+    try {
+      const saved = localStorage.getItem('ereceipt_admin_page') as AdminPage | null;
+      if (
+        saved &&
+        [
+          'overview',
+          'approvals',
+          'merchantReview',
+          'directory',
+          'merchantDetails',
+          'sales',
+          'reports',
+          'reportReview',
+          'taxRecords',
+          'audit',
+          'settings',
+        ].includes(saved)
+      ) {
+        return saved;
+      }
+    } catch {}
+    return 'overview';
+  });
   const [globalSearch, setGlobalSearch] = useState('');
   const [directorySearch, setDirectorySearch] = useState('');
   const [directoryQuery, setDirectoryQuery] = useState('');
@@ -73,6 +96,10 @@ export const Admin: React.FC<AdminProps> = ({ onReturnToMerchant }) => {
         if (stored) setCurrentOfficer(JSON.parse(stored));
       } catch {}
     }
+    try {
+      localStorage.setItem('ereceipt_active_view', 'admin');
+      sessionStorage.setItem('ereceipt_active_view', 'admin');
+    } catch {}
     setSignedIn(true);
   };
 
@@ -89,6 +116,11 @@ export const Admin: React.FC<AdminProps> = ({ onReturnToMerchant }) => {
     }
     localStorage.removeItem('officer_token');
     localStorage.removeItem('officer_user');
+    localStorage.removeItem('ereceipt_admin_page');
+    try {
+      localStorage.removeItem('ereceipt_active_view');
+      sessionStorage.removeItem('ereceipt_active_view');
+    } catch {}
     setCurrentOfficer(null);
     setSignedIn(false);
   };
@@ -294,6 +326,10 @@ export const Admin: React.FC<AdminProps> = ({ onReturnToMerchant }) => {
 
   const navigate = (target: string) => {
     setPage(target as AdminPage);
+    try {
+      localStorage.setItem('ereceipt_admin_page', target);
+      localStorage.setItem('ereceipt_active_view', 'admin');
+    } catch {}
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 

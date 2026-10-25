@@ -27,6 +27,17 @@ type AppView =
 const SESSION_VIEW_KEY = 'ereceipt_active_view';
 const SESSION_SCREEN_KEY = 'ereceipt_active_screen';
 
+export function isOfficerAuthenticated(): boolean {
+  try {
+    const token =
+      window.localStorage.getItem('officer_token') ||
+      window.sessionStorage.getItem('officer_token');
+    return Boolean(token && token.trim().length > 10);
+  } catch {
+    return false;
+  }
+}
+
 export function isMerchantAuthenticated(): boolean {
   try {
     const token =
@@ -54,8 +65,12 @@ function parseUrlState(): { view: AppView; merchantScreen: string } {
   const viewParam = (params.get('view') || '').toLowerCase();
   const screenParam = (params.get('screen') || '').toLowerCase();
 
-  const savedView = window.sessionStorage.getItem(SESSION_VIEW_KEY) as AppView | null;
-  const savedScreen = window.sessionStorage.getItem(SESSION_SCREEN_KEY) || 'dashboard';
+  const savedView = (window.localStorage.getItem(SESSION_VIEW_KEY) ||
+    window.sessionStorage.getItem(SESSION_VIEW_KEY)) as AppView | null;
+  const savedScreen =
+    window.localStorage.getItem(SESSION_SCREEN_KEY) ||
+    window.sessionStorage.getItem(SESSION_SCREEN_KEY) ||
+    'dashboard';
 
   // Public receipt verification or image routes
   if (viewParam === 'receipt-image' || viewParam === 'image' || pathname.startsWith('/receipt-image')) {
@@ -140,15 +155,42 @@ function parseUrlState(): { view: AppView; merchantScreen: string } {
     return { view: 'merchant', merchantScreen: screen };
   }
 
-  // 3. Saved session state on refresh (if user is authenticated)
+  // 3. Saved state on refresh or app relaunch (if user is authenticated)
   if (savedView && savedView !== 'landing') {
-    if ((savedView === 'merchant' || savedView === 'receipt-issuance') && !isMerchantAuthenticated()) {
-      return { view: 'landing', merchantScreen: 'dashboard' };
+    if (savedView === 'admin') {
+      if (isOfficerAuthenticated()) {
+        return { view: 'admin', merchantScreen: 'dashboard' };
+      }
+    } else if (savedView === 'receipt-issuance' || (savedView as string) === 'pos') {
+      if (isMerchantAuthenticated()) {
+        return { view: 'receipt-issuance', merchantScreen: 'dashboard' };
+      }
+    } else if (savedView === 'merchant') {
+      if (isMerchantAuthenticated()) {
+        return { view: 'merchant', merchantScreen: savedScreen };
+      }
+    } else {
+      return { view: savedView, merchantScreen: savedScreen };
     }
-    return { view: savedView, merchantScreen: savedScreen };
   }
 
-  // 4. Default: ALWAYS start from the Landing Page
+  // 4. Stay logged in on app restart / browser refresh when user is authenticated
+  if (isMerchantAuthenticated()) {
+    const defaultScreen =
+      savedScreen && savedScreen !== 'signin' && savedScreen !== 'landing'
+        ? savedScreen
+        : 'dashboard';
+    if (savedView === 'receipt-issuance') {
+      return { view: 'receipt-issuance', merchantScreen: 'dashboard' };
+    }
+    return { view: 'merchant', merchantScreen: defaultScreen };
+  }
+
+  if (isOfficerAuthenticated() && (savedView === 'admin' || pathname.includes('admin'))) {
+    return { view: 'admin', merchantScreen: 'dashboard' };
+  }
+
+  // 5. Default: Start from the Landing Page
   return { view: 'landing', merchantScreen: 'dashboard' };
 }
 
@@ -174,8 +216,16 @@ function App() {
     const handleSessionExpired = (e: Event) => {
       const detail = (e as CustomEvent).detail;
       console.info('[Auth] Session expired:', detail?.message);
-      sessionStorage.removeItem('ereceipt_active_view');
-      sessionStorage.removeItem('ereceipt_active_screen');
+      try {
+        window.sessionStorage.removeItem(SESSION_VIEW_KEY);
+        window.sessionStorage.removeItem(SESSION_SCREEN_KEY);
+        window.localStorage.removeItem(SESSION_VIEW_KEY);
+        window.localStorage.removeItem(SESSION_SCREEN_KEY);
+        window.localStorage.removeItem('ereceipt_token');
+        window.localStorage.removeItem('merchant_token');
+        window.localStorage.removeItem('merchant_user');
+        window.localStorage.removeItem('ereceipt_merchant');
+      } catch {}
       setCurrentView('signin');
       setMerchantScreen('dashboard');
     };
@@ -196,8 +246,16 @@ function App() {
       urlQuery = '?view=registration';
     } else if (screen === 'signout' || screen === 'logout') {
       clearStoredMerchantProfile();
-      window.sessionStorage.removeItem(SESSION_VIEW_KEY);
-      window.sessionStorage.removeItem(SESSION_SCREEN_KEY);
+      try {
+        window.localStorage.removeItem('ereceipt_token');
+        window.localStorage.removeItem('merchant_token');
+        window.localStorage.removeItem('merchant_user');
+        window.localStorage.removeItem('ereceipt_merchant');
+        window.localStorage.removeItem(SESSION_VIEW_KEY);
+        window.localStorage.removeItem(SESSION_SCREEN_KEY);
+        window.sessionStorage.removeItem(SESSION_VIEW_KEY);
+        window.sessionStorage.removeItem(SESSION_SCREEN_KEY);
+      } catch {}
       targetView = 'landing';
       urlQuery = '?view=landing';
     } else if (screen === 'login' || screen === 'signin') {
@@ -238,9 +296,13 @@ function App() {
       }
     }
 
-    // Persist active view and screen so refresh stays right where user is
-    window.sessionStorage.setItem(SESSION_VIEW_KEY, targetView);
-    window.sessionStorage.setItem(SESSION_SCREEN_KEY, targetMerchantScreen);
+    // Persist active view and screen so refresh and closing/reopening the app stays right where user is
+    try {
+      window.localStorage.setItem(SESSION_VIEW_KEY, targetView);
+      window.localStorage.setItem(SESSION_SCREEN_KEY, targetMerchantScreen);
+      window.sessionStorage.setItem(SESSION_VIEW_KEY, targetView);
+      window.sessionStorage.setItem(SESSION_SCREEN_KEY, targetMerchantScreen);
+    } catch {}
 
     setCurrentView(targetView);
     setMerchantScreen(targetMerchantScreen);
