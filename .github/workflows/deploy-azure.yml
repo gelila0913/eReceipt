@@ -5,7 +5,14 @@ on:
     branches:
       - main
       - Fani
+    paths-ignore:
+      - '**.md'
+      - '.github/workflows/build-apk.yml'
   workflow_dispatch:
+
+concurrency:
+  group: azure-deployment
+  cancel-in-progress: false
 
 permissions:
   id-token: write
