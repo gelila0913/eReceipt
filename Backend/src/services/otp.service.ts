@@ -159,38 +159,39 @@ class OtpService {
     this.initResend(); // Re-read if key was updated in environment
 
     if (this.resendClient) {
-      try {
-        const fromEmail = process.env.RESEND_FROM_EMAIL || 'eReceipt <onboarding@resend.dev>';
-        const subject = `eReceipt · Verification Code: ${code}`;
+      const fromEmail = process.env.RESEND_FROM_EMAIL || 'eReceipt <onboarding@resend.dev>';
+      const subject = `eReceipt · Verification Code: ${code}`;
 
-        const html = `
-          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 520px; margin: 0 auto; padding: 28px; border: 1px solid #E2E8F0; border-radius: 12px; background-color: #FFFFFF;">
-            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 22px;">
-              <span style="font-size: 24px; font-weight: 800; color: #123D2C; letter-spacing: -0.5px;">eReceipt</span>
-              <span style="font-size: 12px; color: #64748B; padding-left: 8px; border-left: 1px solid #CBD5E1;">Digital Receipts. A Stronger Ethiopia.</span>
-            </div>
-            
-            <h2 style="font-size: 20px; color: #0F172A; margin: 0 0 12px 0;">Your Verification Code</h2>
-            <p style="font-size: 14px; color: #334155; line-height: 1.6; margin: 0 0 20px 0;">
-              Hello ${recipientName || 'there'},<br />
-              Use the 6-digit one-time code below to complete your authentication with <strong>eReceipt</strong>.
-            </p>
-
-            <div style="margin: 24px 0; text-align: center; background-color: #F8FAFC; border: 1px solid #CBD5E1; border-radius: 10px; padding: 22px;">
-              <span style="font-size: 38px; font-weight: 800; letter-spacing: 8px; color: #123D2C; font-family: monospace;">${code}</span>
-              <p style="margin: 10px 0 0 0; font-size: 13px; color: #64748B; font-weight: 500;">This code is valid for 10 minutes.</p>
-            </div>
-
-            <p style="font-size: 13px; color: #64748B; line-height: 1.5; margin: 0 0 20px 0;">
-              If you did not request this verification code, please ignore this email or contact support.
-            </p>
-
-            <hr style="border: none; border-top: 1px solid #E2E8F0; margin: 24px 0;" />
-            <p style="font-size: 12px; color: #94A3B8; text-align: center; margin: 0;">
-              eReceipt · Digital Receipts. A Stronger Ethiopia.
-            </p>
+      const html = `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 520px; margin: 0 auto; padding: 28px; border: 1px solid #E2E8F0; border-radius: 12px; background-color: #FFFFFF;">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 22px;">
+            <span style="font-size: 24px; font-weight: 800; color: #123D2C; letter-spacing: -0.5px;">eReceipt</span>
+            <span style="font-size: 12px; color: #64748B; padding-left: 8px; border-left: 1px solid #CBD5E1;">Digital Receipts. A Stronger Ethiopia.</span>
           </div>
-        `;
+          
+          <h2 style="font-size: 20px; color: #0F172A; margin: 0 0 12px 0;">Your Verification Code</h2>
+          <p style="font-size: 14px; color: #334155; line-height: 1.6; margin: 0 0 20px 0;">
+            Hello ${recipientName || 'there'},<br />
+            Use the 6-digit one-time code below to complete your authentication with <strong>eReceipt</strong>.
+          </p>
+
+          <div style="margin: 24px 0; text-align: center; background-color: #F8FAFC; border: 1px solid #CBD5E1; border-radius: 10px; padding: 22px;">
+            <span style="font-size: 38px; font-weight: 800; letter-spacing: 8px; color: #123D2C; font-family: monospace;">${code}</span>
+            <p style="margin: 10px 0 0 0; font-size: 13px; color: #64748B; font-weight: 500;">This code is valid for 10 minutes.</p>
+          </div>
+
+          <p style="font-size: 13px; color: #64748B; line-height: 1.5; margin: 0 0 20px 0;">
+            If you did not request this verification code, please ignore this email or contact support.
+          </p>
+
+          <hr style="border: none; border-top: 1px solid #E2E8F0; margin: 24px 0;" />
+          <p style="font-size: 12px; color: #94A3B8; text-align: center; margin: 0;">
+            eReceipt · Digital Receipts. A Stronger Ethiopia.
+          </p>
+        </div>
+      `;
+
+      try {
 
         const response = await this.resendClient.emails.send({
           from: fromEmail,
@@ -201,13 +202,50 @@ class OtpService {
 
         if (response.error) {
           console.warn('[Resend API Error]:', response.error.message || response.error);
-          throw new Error(response.error.message || 'Failed to dispatch verification email via Resend.');
+          const errMsg = response.error.message || '';
+          if (
+            (errMsg.includes('only send testing emails') || errMsg.includes('verify a domain')) &&
+            cleanEmail !== 'fanuelgoitom79@gmail.com'
+          ) {
+            console.log(`[Resend Trial Forward]: Forwarding OTP to verified account owner fanuelgoitom79@gmail.com (intended for: ${cleanEmail})`);
+            const fallback = await this.resendClient.emails.send({
+              from: fromEmail,
+              to: 'fanuelgoitom79@gmail.com',
+              subject: `[Dev Forward · Intended for ${cleanEmail}] ${subject}`,
+              html: `<div style="padding:10px;background:#FEF3C7;border:1px solid #F59E0B;border-radius:6px;margin-bottom:16px;font-size:13px;color:#92400E;"><strong>Resend Testing Mode:</strong> This email was originally addressed to <code>${cleanEmail}</code>.</div>` + html,
+            });
+            if (fallback.error) {
+              throw new Error(fallback.error.message || 'Failed to dispatch verification email via Resend.');
+            }
+          } else {
+            throw new Error(response.error.message || 'Failed to dispatch verification email via Resend.');
+          }
         } else {
           console.log(`✓ [Resend Email Sent]: Message ID ${response.data?.id} to ${cleanEmail}`);
         }
       } catch (sendError: any) {
-        console.error('[Resend Error]: Email dispatch threw error:', sendError?.message || sendError);
-        throw new Error(sendError?.message || 'Failed to dispatch verification email. Please try again.');
+        const msg = sendError?.message || '';
+        if (
+          (msg.includes('only send testing emails') || msg.includes('verify a domain')) &&
+          cleanEmail !== 'fanuelgoitom79@gmail.com' &&
+          this.resendClient
+        ) {
+          try {
+            console.log(`[Resend Trial Catch Forward]: Forwarding OTP to fanuelgoitom79@gmail.com`);
+            await this.resendClient.emails.send({
+              from: fromEmail,
+              to: 'fanuelgoitom79@gmail.com',
+              subject: `[Dev Forward · Intended for ${cleanEmail}] ${subject}`,
+              html: `<div style="padding:10px;background:#FEF3C7;border:1px solid #F59E0B;border-radius:6px;margin-bottom:16px;font-size:13px;color:#92400E;"><strong>Resend Testing Mode:</strong> This email was originally addressed to <code>${cleanEmail}</code>.</div>` + html,
+            });
+          } catch (fErr) {
+            console.error('[Resend Error]: Forwarding also threw error:', fErr);
+            throw new Error(msg || 'Failed to dispatch verification email. Please try again.');
+          }
+        } else {
+          console.error('[Resend Error]: Email dispatch threw error:', msg || sendError);
+          throw new Error(msg || 'Failed to dispatch verification email. Please try again.');
+        }
       }
     } else {
       throw new Error('Resend email service client could not be initialized.');

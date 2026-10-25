@@ -98,21 +98,69 @@ export const Admin: React.FC<AdminProps> = ({ onReturnToMerchant }) => {
     const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
     fetch(`${API_BASE_URL}/api/admin/merchants/applications`, { headers })
-      .then((res) => res.json())
+      .then((res) => {
+        if (res.status === 401 || res.status === 403) {
+          handleSignOut();
+          return null;
+        }
+        return res.json();
+      })
       .then((data) => {
-        if (data.success && Array.isArray(data.data)) {
-          setApplications(data.data);
-          if (data.data.length > 0) {
-            setSelectedMerchantRef((prev) => prev || data.data[0].ref);
+        if (data && data.success && Array.isArray(data.data)) {
+          const serverApps = [...data.data];
+
+          // Instant local sync if merchant registered in this browser session
+          try {
+            const localRaw = localStorage.getItem('ereceipt:merchant_profile');
+            if (localRaw) {
+              const localProf = JSON.parse(localRaw);
+              if (
+                localProf.referenceNumber &&
+                !serverApps.some((a: any) => a.ref === localProf.referenceNumber)
+              ) {
+                serverApps.unshift({
+                  ref: localProf.referenceNumber,
+                  name: localProf.sellerLegalName || localProf.fullName || 'Registered Merchant',
+                  tin: localProf.tin,
+                  merchantId: `MER-${(localProf.tin || '').slice(-5)}`,
+                  category: 'Retail',
+                  date: new Date().toLocaleDateString('en-GB', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                  }),
+                  status: localProf.status || 'Pending',
+                  address:
+                    [localProf.city, localProf.subCity, localProf.buildingName]
+                      .filter(Boolean)
+                      .join(', ') || 'Addis Ababa',
+                  fullName: localProf.fullName,
+                  phoneNumber: localProf.phoneNumber,
+                  tradeName: localProf.tradeName,
+                  businessLicenseNumber: localProf.businessLicenseNumber,
+                  city: localProf.city,
+                  subCity: localProf.subCity,
+                  buildingName: localProf.buildingName,
+                  floor: localProf.floor,
+                  gpsLocation: localProf.gpsLocation,
+                  uploadedFileName: localProf.uploadedFileName,
+                });
+              }
+            }
+          } catch {}
+
+          setApplications(serverApps);
+          if (serverApps.length > 0) {
+            setSelectedMerchantRef((prev) => prev || serverApps[0].ref);
           }
         }
       })
       .catch(() => {});
 
     fetch(`${API_BASE_URL}/api/admin/merchants/directory`, { headers })
-      .then((res) => res.json())
+      .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data.success && Array.isArray(data.data)) {
+        if (data && data.success && Array.isArray(data.data)) {
           setMerchants(data.data);
         }
       })

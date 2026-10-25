@@ -8,18 +8,27 @@
  * Vite's proxy automatically routes `/api` requests to http://localhost:5000.
  */
 
-const LIVE_AZURE_BACKEND = 'https://backend.salmonwater-89ba5a67.southafricanorth.azurecontainerapps.io';
+export const LIVE_AZURE_BACKEND =
+  'https://backend.salmonwater-89ba5a67.southafricanorth.azurecontainerapps.io';
 
-const isNativeMobileApp =
-  typeof window !== 'undefined' &&
-  (window.location.protocol === 'capacitor:' ||
-   window.location.protocol === 'file:' ||
-   Boolean((window as any).Capacitor?.isNativePlatform?.()));
+export const API_BASE_URL: string = (() => {
+  // 1. Explicit Vite environment variable override
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL;
+  }
 
-export const API_BASE_URL: string = (
-  import.meta.env.VITE_API_BASE_URL
-    ? import.meta.env.VITE_API_BASE_URL
-    : (isNativeMobileApp ? LIVE_AZURE_BACKEND : '')
-).replace(/\/+$/, '');
+  // 2. Local Vite development server on port 5173
+  if (
+    typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') &&
+    window.location.port === '5173'
+  ) {
+    return '';
+  }
+
+  // 3. Everywhere else (Azure production web container, Capacitor Android mobile APK):
+  // ALWAYS communicate directly with the official live Azure backend!
+  return LIVE_AZURE_BACKEND;
+})().replace(/\/+$/, '');
 
 export default API_BASE_URL;
