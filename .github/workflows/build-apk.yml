@@ -31,21 +31,26 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Set up Node.js 20
+      - name: Set up Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
           cache-dependency-path: 'Frontend/ereceipt/package-lock.json'
 
-      - name: Install Frontend Dependencies & Build Web Assets
+      - name: Install Dependencies
+        working-directory: Frontend/ereceipt
+        run: npm ci
+
+      - name: Build Web Assets with Azure Production API
         working-directory: Frontend/ereceipt
         env:
           VITE_API_BASE_URL: https://backend.salmonwater-89ba5a67.southafricanorth.azurecontainerapps.io
-        run: |
-          npm ci
-          npm run build
-          npx cap sync android
+        run: npm run build
+
+      - name: Sync Capacitor Android Project
+        working-directory: Frontend/ereceipt
+        run: npx cap sync android
 
       - name: Prepare Gradle Wrapper
         working-directory: Frontend/ereceipt/android
