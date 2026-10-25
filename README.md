@@ -12,6 +12,7 @@ The system is fully containerized and hosted live on **Microsoft Azure Container
 |---|---|---|---|
 | 👑 **Admin Portal** | [**tinyurl.com/admin-erecipt**](https://tinyurl.com/admin-erecipt) | Tax Authority & Revenue Officer Portal for reviewing merchant applications, approving licenses, and auditing tax invoices | `officer@revenue.gov.et`<br>`Admin#2026` |
 | 🛒 **Merchant Portal** | [**tinyurl.com/eReciptL**](https://tinyurl.com/eReciptL) | Business Workspace for merchant onboarding, sales registration, product catalogs, and POS digital receipt issuance | Registered Merchant TIN & Password |
+| 📱 **Merchant Android App** | [**Download APK (v1.0.0)**](https://github.com/gelila0913/eReceipt/releases/download/v1.0.0/eReceipt-Merchant.apk) | Native Android APK for point-of-sale receipt issuance, mobile bottom navigation, and fiscal records | [Release Notes & APK](https://github.com/gelila0913/eReceipt/releases/tag/v1.0.0) |
 | 🔍 **Public QR Verification** | [**Verify Receipt**](https://ereceipt-frontend.salmonwater-89ba5a67.southafricanorth.azurecontainerapps.io/verify) | Public scanner to view, authenticate, and verify cleared tax receipts | Any scannable receipt QR code |
 
 > [!NOTE]
