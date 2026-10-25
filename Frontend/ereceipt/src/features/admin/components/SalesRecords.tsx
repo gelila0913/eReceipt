@@ -24,7 +24,9 @@ export const SalesRecords: React.FC = () => {
 
   useEffect(() => {
     const fetchReceipts = () => {
-      fetch(`${API_BASE_URL}/api/receipts`)
+      const token = localStorage.getItem('officer_token');
+      const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+      fetch(`${API_BASE_URL}/api/receipts`, { headers, credentials: 'include' })
         .then((res) => res.json())
         .then((data) => {
           if (data.success && Array.isArray(data.receipts)) {

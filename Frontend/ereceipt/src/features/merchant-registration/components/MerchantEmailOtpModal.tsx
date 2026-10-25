@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, CheckCircle2, AlertCircle, RotateCw, X, Zap } from 'lucide-react';
+import { Mail, CheckCircle2, AlertCircle, RotateCw, X } from 'lucide-react';
 import { API_BASE_URL } from '../../../config/api';
 
 interface MerchantEmailOtpModalProps {
@@ -23,9 +23,6 @@ export const MerchantEmailOtpModal: React.FC<MerchantEmailOtpModalProps> = ({
   const [isResending, setIsResending] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(45);
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
-  const [simulatedCode, setSimulatedCode] = useState<string | null>(null);
-  const [isSimulated, setIsSimulated] = useState<boolean>(false);
-  const [deliveryNotice, setDeliveryNotice] = useState<string | null>(null);
 
   // Send OTP on initial modal open
   useEffect(() => {
@@ -33,9 +30,6 @@ export const MerchantEmailOtpModal: React.FC<MerchantEmailOtpModalProps> = ({
     setCode('');
     setError(null);
     setSuccessNotice(null);
-    setSimulatedCode(null);
-    setIsSimulated(false);
-    setDeliveryNotice(null);
     sendOtpCode();
   }, [isOpen, email]);
 
@@ -47,8 +41,6 @@ export const MerchantEmailOtpModal: React.FC<MerchantEmailOtpModalProps> = ({
     }, 1000);
     return () => clearInterval(interval);
   }, [isOpen, resendCooldown]);
-
-  const [offlineFallbackCode, setOfflineFallbackCode] = useState<string | null>(null);
 
   // Helper to dispatch OTP requests with proxy fallback
   const postOtpRequest = async (endpoint: string, bodyPayload: any) => {
@@ -102,30 +94,9 @@ export const MerchantEmailOtpModal: React.FC<MerchantEmailOtpModalProps> = ({
       }
 
       setResendCooldown(data.cooldownSeconds || 45);
-      setIsSimulated(Boolean(data.simulated));
-      setDeliveryNotice(data.deliveryNotice || null);
-      if (data.code) {
-        setSimulatedCode(data.code);
-      }
       setSuccessNotice(data.message || `Verification code sent to ${email}.`);
     } catch (err: any) {
-      const isNetwork =
-        err?.name === 'TypeError' ||
-        (err?.message && (err.message.includes('fetch') || err.message.includes('NetworkError')));
-
-      if (isNetwork) {
-        // Backend offline / unreachable: activate client-side simulation code
-        const fallback = '123456';
-        setOfflineFallbackCode(fallback);
-        setSimulatedCode(fallback);
-        setIsSimulated(true);
-        setDeliveryNotice(
-          'Backend is currently offline or unreachable. Running in offline development mode: use code 123456 to continue.'
-        );
-        setSuccessNotice('Offline demo mode active (Backend is not reachable).');
-      } else {
-        setError(err.message || 'Could not send verification email. Please check the address.');
-      }
+      setError(err.message || 'Could not send verification email. Please check the address and try again.');
     } finally {
       setIsResending(false);
     }
@@ -173,16 +144,7 @@ export const MerchantEmailOtpModal: React.FC<MerchantEmailOtpModalProps> = ({
 
       onVerified();
     } catch (err: any) {
-      const isNetwork =
-        err?.name === 'TypeError' ||
-        (err?.message && (err.message.includes('fetch') || err.message.includes('NetworkError')));
-
-      // In offline mode, if code matches simulated code or fallback, allow completion
-      if (isNetwork && (cleanCode === simulatedCode || cleanCode === offlineFallbackCode || cleanCode === '123456')) {
-        onVerified();
-      } else {
-        setError(err.message || 'Verification failed. Please check the code.');
-      }
+      setError(err?.message || 'Verification failed. Please check the code and try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -277,7 +239,7 @@ export const MerchantEmailOtpModal: React.FC<MerchantEmailOtpModalProps> = ({
               Verify Business Email
             </h3>
             <p style={{ margin: '2px 0 0 0', fontSize: '13px', color: '#64748B' }}>
-              {isSimulated ? 'Simulation Active · Instant Code Available' : '6-Digit Email Verification'}
+              6-Digit One-Time Security Code
             </p>
           </div>
         </div>
@@ -287,77 +249,6 @@ export const MerchantEmailOtpModal: React.FC<MerchantEmailOtpModalProps> = ({
           <br />
           <strong style={{ color: '#0F172A', fontWeight: 600 }}>{email}</strong>
         </p>
-
-        {/* Simulation / Development Banner */}
-        {simulatedCode && (
-          <div
-            style={{
-              backgroundColor: '#FEF3C7',
-              border: '1px solid #FCD34D',
-              borderRadius: '8px',
-              padding: '12px 14px',
-              marginBottom: '16px',
-              color: '#92400E',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: '6px',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, fontSize: '13px' }}>
-                <Zap size={15} color="#D97706" />
-                <span>Simulation / Dev Mode</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setCode(simulatedCode);
-                  setError(null);
-                  verifyCode(simulatedCode);
-                }}
-                style={{
-                  backgroundColor: '#D97706',
-                  color: '#FFFFFF',
-                  border: 'none',
-                  borderRadius: '6px',
-                  padding: '4px 10px',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'background-color 0.15s',
-                }}
-              >
-                Autofill & Verify
-              </button>
-            </div>
-            <p style={{ margin: '0 0 4px 0', fontSize: '12px', lineHeight: 1.4, color: '#78350F' }}>
-              Email delivery is simulated. Your verification code is:
-              <strong
-                style={{
-                  marginLeft: '6px',
-                  fontSize: '15px',
-                  letterSpacing: '2px',
-                  fontFamily: 'monospace',
-                  color: '#92400E',
-                  backgroundColor: '#FDE68A',
-                  padding: '2px 6px',
-                  borderRadius: '4px',
-                }}
-              >
-                {simulatedCode}
-              </strong>
-            </p>
-            {deliveryNotice && (
-              <p style={{ margin: 0, fontSize: '11px', color: '#B45309', opacity: 0.9 }}>
-                {deliveryNotice}
-              </p>
-            )}
-          </div>
-        )}
 
         <form onSubmit={handleVerify}>
           {/* OTP Input Field */}
@@ -523,26 +414,6 @@ export const MerchantEmailOtpModal: React.FC<MerchantEmailOtpModalProps> = ({
               }}
             >
               {isSubmitting ? 'Verifying...' : 'Verify & Continue'}
-            </button>
-          </div>
-
-          {/* Quick Skip for Evaluation / Demo */}
-          <div style={{ textAlign: 'center', marginTop: '14px', borderTop: '1px solid #F1F5F9', paddingTop: '12px' }}>
-            <button
-              type="button"
-              onClick={() => onVerified()}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#64748B',
-                fontSize: '13px',
-                fontWeight: 500,
-                textDecoration: 'underline',
-                cursor: 'pointer',
-                padding: '4px 8px',
-              }}
-            >
-              Skip email verification and proceed to Step 2 →
             </button>
           </div>
         </form>

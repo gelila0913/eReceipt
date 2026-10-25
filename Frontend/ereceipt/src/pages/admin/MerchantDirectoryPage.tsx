@@ -11,7 +11,10 @@ export const MerchantDirectoryPage: React.FC = () => {
   const [merchants, setMerchants] = useState<DirectoryMerchantItem[]>([]);
 
   useEffect(() => {
-    fetch(`${API_BASE_URL}/api/admin/merchants/directory`)
+    const token = localStorage.getItem('officer_token');
+    const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+
+    fetch(`${API_BASE_URL}/api/admin/merchants/directory`, { headers })
       .then((res) => res.json())
       .then((data) => {
         if (data.success && Array.isArray(data.data)) {

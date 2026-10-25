@@ -26,12 +26,7 @@ otpRouter.post('/send', async (req: Request, res: Response) => {
       return;
     }
 
-    res.status(200).json({
-      ...result,
-      debugNotice: result.simulated
-        ? 'Simulation mode is active: 6-digit code is provided in response and console.'
-        : undefined,
-    });
+    res.status(200).json(result);
   } catch (error: any) {
     res.status(400).json({ success: false, error: error.message || 'Failed to dispatch verification code.' });
   }
@@ -88,12 +83,7 @@ otpRouter.post('/resend', async (req: Request, res: Response) => {
       return;
     }
 
-    res.status(200).json({
-      ...result,
-      debugNotice: result.simulated
-        ? 'Simulation mode is active: 6-digit code is provided in response and console.'
-        : undefined,
-    });
+    res.status(200).json(result);
   } catch (error: any) {
     res.status(400).json({ success: false, error: error.message || 'Failed to resend verification code.' });
   }

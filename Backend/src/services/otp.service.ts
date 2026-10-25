@@ -52,17 +52,17 @@ class OtpService {
   }
 
   private initResend(): void {
-    const apiKey = process.env.RESEND_API_KEY;
-    if (apiKey && apiKey.trim() !== '') {
+    const apiKey = (process.env.RESEND_API_KEY || '').trim();
+    if (apiKey) {
       try {
-        this.resendClient = new Resend(apiKey.trim());
-        console.log('[Resend Service]: Initialized successfully with API Key.');
+        this.resendClient = new Resend(apiKey);
+        console.log('[Resend Service]: Initialized successfully with active Resend API Key.');
       } catch (err) {
-        console.warn('[Resend Service]: Failed to initialize client, switching to simulation mode:', err);
+        console.error('[Resend Service]: Failed to initialize client:', err);
         this.resendClient = null;
       }
     } else {
-      console.log('[Resend Service]: No RESEND_API_KEY detected in environment. Running in development simulation mode.');
+      console.warn('[Resend Service]: RESEND_API_KEY is not defined in environment.');
       this.resendClient = null;
     }
   }
@@ -158,9 +158,6 @@ class OtpService {
     // Check for Resend client
     this.initResend(); // Re-read if key was updated in environment
 
-    let deliverySimulated = true;
-    let fallbackReason: string | undefined;
-
     if (this.resendClient) {
       try {
         const fromEmail = process.env.RESEND_FROM_EMAIL || 'eReceipt <onboarding@resend.dev>';
@@ -203,52 +200,25 @@ class OtpService {
         });
 
         if (response.error) {
-          console.warn('[Resend API Warning]:', response.error.message || response.error);
-          fallbackReason = response.error.message || 'Resend rejected delivery request';
-          if (response.error.message?.includes('testing emails')) {
-            console.warn('[Resend Sandbox Notice]: Free accounts can only send to your verified account email address. Set a custom domain in Resend to send to any recipient.');
-          }
-          deliverySimulated = true;
+          console.warn('[Resend API Error]:', response.error.message || response.error);
+          throw new Error(response.error.message || 'Failed to dispatch verification email via Resend.');
         } else {
           console.log(`✓ [Resend Email Sent]: Message ID ${response.data?.id} to ${cleanEmail}`);
-          deliverySimulated = false;
         }
       } catch (sendError: any) {
-        console.warn('[Resend Fallback]: Email dispatch threw error, falling back to simulated mode:', sendError?.message || sendError);
-        fallbackReason = sendError?.message || 'Network/connection error during email dispatch';
-        deliverySimulated = true;
+        console.error('[Resend Error]: Email dispatch threw error:', sendError?.message || sendError);
+        throw new Error(sendError?.message || 'Failed to dispatch verification email. Please try again.');
       }
     } else {
-      fallbackReason = 'No RESEND_API_KEY defined in environment';
+      throw new Error('Resend email service client could not be initialized.');
     }
-
-    if (deliverySimulated) {
-      console.log(`=======================================================`);
-      console.log(`🔑 [Resend OTP Code Generated]`);
-      console.log(`📧 Recipient : ${cleanEmail}`);
-      console.log(`🎯 Purpose   : ${purpose}`);
-      console.log(`🔒 CODE      : ${code}`);
-      console.log(`ℹ️ Reason    : ${fallbackReason || 'Simulation mode'}`);
-      console.log(`⏳ Expires   : in ${this.EXPIRY_MINUTES} minutes`);
-      console.log(`=======================================================`);
-    }
-
-    const isDev = config.nodeEnv !== 'production';
-    const showCodeInResponse = deliverySimulated || isDev;
 
     return {
       success: true,
-      message: deliverySimulated
-        ? `Verification code generated in simulation mode for ${cleanEmail}.`
-        : `Verification code sent to ${cleanEmail}.`,
+      message: `A 6-digit verification code has been sent to ${cleanEmail}. Please check your inbox.`,
       email: cleanEmail,
-      simulated: deliverySimulated,
-      code: showCodeInResponse ? code : undefined,
-      deliveryNotice: deliverySimulated
-        ? (fallbackReason
-            ? `Simulation mode (${fallbackReason}). Your verification code is provided for testing.`
-            : 'Resend email dispatch was simulated. The 6-digit verification code is available for development testing.')
-        : 'Email successfully dispatched via Resend to your mailbox.',
+      simulated: false,
+      deliveryNotice: 'Verification email dispatched to your inbox via Resend.',
       cooldownSeconds: this.COOLDOWN_SECONDS,
     };
   }

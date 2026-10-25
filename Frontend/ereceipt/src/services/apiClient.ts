@@ -30,6 +30,7 @@ function clearAuthSession(): void {
 
 function getAuthToken(): string | null {
   return (
+    localStorage.getItem('officer_token') ||
     localStorage.getItem('ereceipt_token') ||
     localStorage.getItem('merchant_token') ||
     sessionStorage.getItem('ereceipt_token') ||

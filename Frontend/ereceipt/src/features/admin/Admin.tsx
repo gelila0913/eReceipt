@@ -118,11 +118,75 @@ export const Admin: React.FC<AdminProps> = ({ onReturnToMerchant }) => {
       })
       .catch(() => {});
 
-    fetch(`${API_BASE_URL}/api/receipts`)
+    fetch(`${API_BASE_URL}/api/receipts`, { headers, credentials: 'include' })
       .then((res) => res.json())
       .then((data) => {
         if (data.success && Array.isArray(data.receipts)) {
           setLiveReceipts(data.receipts);
+
+          // Dynamically compute merchant periodic tax reports from live receipts
+          const dynamicReports: TaxReportItem[] = [];
+          const groups: Record<
+            string,
+            {
+              name: string;
+              tin: string;
+              period: string;
+              sales: number;
+              tax: number;
+              date: string;
+            }
+          > = {};
+
+          data.receipts.forEach((r: any) => {
+            const tin = r.merchantTin || r.sellerTin || '0019274635';
+            const name =
+              r.merchantName ||
+              r.sellerTradeName ||
+              r.merchantLegalName ||
+              'Registered Merchant';
+            const issuedDate = r.issuedAt ? new Date(r.issuedAt) : new Date();
+            const period = issuedDate.toLocaleString('en-US', {
+              month: 'long',
+              year: 'numeric',
+            });
+            const key = `${tin}-${period}`;
+
+            if (!groups[key]) {
+              groups[key] = {
+                name,
+                tin,
+                period,
+                sales: 0,
+                tax: 0,
+                date: issuedDate.toLocaleDateString('en-GB', {
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric',
+                }),
+              };
+            }
+            groups[key].sales += Number(r.total || r.totalAmount || 0);
+            groups[key].tax += Number(r.tax || r.vatAmount || 0);
+          });
+
+          Object.entries(groups).forEach(([_, g], idx) => {
+            dynamicReports.push({
+              ref: `TR-${new Date().getFullYear()}-${String(1001 + idx).padStart(4, '0')}`,
+              name: g.name,
+              tin: g.tin,
+              period: g.period,
+              category: 'VAT',
+              sales: Math.round(g.sales * 100) / 100,
+              tax: Math.round(g.tax * 100) / 100,
+              date: g.date,
+              status: 'Approved',
+            });
+          });
+
+          if (dynamicReports.length > 0) {
+            setReports(dynamicReports);
+          }
         }
       })
       .catch(() => {});
@@ -476,6 +540,7 @@ export const Admin: React.FC<AdminProps> = ({ onReturnToMerchant }) => {
               renderSales={() => <SalesRecords />}
               renderTaxRecords={() => (
                 <TaxRecordsLedger
+                  receipts={liveReceipts}
                   onSelectMerchant={(merchantName) => {
                     const match = merchants.find((m) => m.name === merchantName);
                     if (match) {
@@ -510,6 +575,7 @@ export const Admin: React.FC<AdminProps> = ({ onReturnToMerchant }) => {
 
           {page === 'taxRecords' && (
             <TaxRecordsLedger
+              receipts={liveReceipts}
               onSelectMerchant={(merchantName) => {
                 const match = merchants.find((m) => m.name === merchantName);
                 if (match) {

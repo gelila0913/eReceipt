@@ -6,13 +6,20 @@
  *
  * In local dev:
  * Vite's proxy automatically routes `/api` requests to http://localhost:5000.
- *
- * If a custom VITE_API_BASE_URL is specified (e.g. separate Azure Container App URL), it will be used.
  */
+
+const LIVE_AZURE_BACKEND = 'https://backend.salmonwater-89ba5a67.southafricanorth.azurecontainerapps.io';
+
+const isNativeMobileApp =
+  typeof window !== 'undefined' &&
+  (window.location.protocol === 'capacitor:' ||
+   window.location.protocol === 'file:' ||
+   Boolean((window as any).Capacitor?.isNativePlatform?.()));
+
 export const API_BASE_URL: string = (
-  import.meta.env.VITE_API_BASE_URL !== undefined
+  import.meta.env.VITE_API_BASE_URL
     ? import.meta.env.VITE_API_BASE_URL
-    : ''
+    : (isNativeMobileApp ? LIVE_AZURE_BACKEND : '')
 ).replace(/\/+$/, '');
 
 export default API_BASE_URL;

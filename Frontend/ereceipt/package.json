@@ -13,6 +13,7 @@
     "@capacitor/android": "^8.5.3",
     "@capacitor/cli": "^8.5.3",
     "@capacitor/core": "^8.5.3",
+    "@capacitor/geolocation": "^8.2.4",
     "@hookform/resolvers": "^6.0.0",
     "axios": "^1.20.0",
     "lucide-react": "^1.61.0",

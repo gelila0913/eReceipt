@@ -22,35 +22,52 @@ declare global {
     }
   }
 }
+import { officerAuthService } from "../features/admin/officer-auth/index.js";
 
 /**
  * Authentication check middleware.
- * Strictly verifies cryptographic Bearer JWT tokens.
+ * Strictly verifies cryptographic Bearer JWT tokens and revenue officer session tokens.
  */
-export function requireAuth(req: Request, _res: Response, next: NextFunction): void {
-  const authHeader = req.headers.authorization;
+export async function requireAuth(req: Request, _res: Response, next: NextFunction): Promise<void> {
+  try {
+    const authHeader = req.headers.authorization;
 
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    throw new UnauthorizedError("Authentication token is required. Format: Bearer <token>");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      throw new UnauthorizedError("Authentication token is required. Format: Bearer <token>");
+    }
+
+    const token = authHeader.split(" ")[1]?.trim();
+    if (!token) {
+      throw new UnauthorizedError("Invalid authorization format.");
+    }
+
+    // Check if this is an authorized Revenue Officer session token
+    const officer = await officerAuthService.getOfficerFromToken(authHeader);
+    if (officer) {
+      req.user = {
+        id: officer.id,
+        role: officer.role === "ADMIN" ? "admin" : "officer",
+        identifier: officer.username,
+        name: officer.name,
+      };
+      return next();
+    }
+
+    const payload = verifyJwt(token);
+
+    req.user = {
+      id: payload.sub,
+      role: payload.role as UserRole,
+      identifier: payload.identifier || payload.tin || payload.username || payload.sub,
+      name: payload.name,
+      tin: payload.tin,
+      tradeName: payload.tradeName,
+    };
+
+    next();
+  } catch (err) {
+    next(err);
   }
-
-  const token = authHeader.split(" ")[1]?.trim();
-  if (!token) {
-    throw new UnauthorizedError("Invalid authorization format.");
-  }
-
-  const payload = verifyJwt(token);
-
-  req.user = {
-    id: payload.sub,
-    role: payload.role as UserRole,
-    identifier: payload.identifier || payload.tin || payload.username || payload.sub,
-    name: payload.name,
-    tin: payload.tin,
-    tradeName: payload.tradeName,
-  };
-
-  next();
 }
 
 /**
@@ -58,7 +75,7 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction): v
  * Attaches authenticated user if valid Bearer JWT is supplied, but does not block requests if omitted.
  * Essential for POS terminal registers issuing receipts directly.
  */
-export function optionalAuth(req: Request, _res: Response, next: NextFunction): void {
+export async function optionalAuth(req: Request, _res: Response, next: NextFunction): Promise<void> {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -69,6 +86,19 @@ export function optionalAuth(req: Request, _res: Response, next: NextFunction): 
   if (!token) {
     return next();
   }
+
+  try {
+    const officer = await officerAuthService.getOfficerFromToken(authHeader);
+    if (officer) {
+      req.user = {
+        id: officer.id,
+        role: officer.role === "ADMIN" ? "admin" : "officer",
+        identifier: officer.username,
+        name: officer.name,
+      };
+      return next();
+    }
+  } catch {}
 
   try {
     const payload = verifyJwt(token);
