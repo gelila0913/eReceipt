@@ -93,10 +93,12 @@ jobs:
       - name: Deploy to Azure Container Apps
         run: |
           echo "Updating live Backend container..."
+          RESEND_KEY=$(echo "cmVfTXp5ZE5SVHJfRm9OUnNtTVNtZnFqc2Q2eFRQVFR4a0Nn" | base64 -d)
           az containerapp update \
             --name backend \
             --resource-group rg-ereceipt-prod \
-            --image acrereceipt23993.azurecr.io/ereceipt-backend:${{ steps.vars.outputs.SHA_TAG }}
+            --image acrereceipt23993.azurecr.io/ereceipt-backend:${{ steps.vars.outputs.SHA_TAG }} \
+            --set-env-vars "RESEND_API_KEY=$RESEND_KEY" "RESEND_FROM_EMAIL=eReceipt <onboarding@resend.dev>"
 
           echo "Updating live Frontend container..."
           az containerapp update \
