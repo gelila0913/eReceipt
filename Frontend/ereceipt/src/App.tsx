@@ -281,7 +281,6 @@ function App() {
             onHomeClick={() => handleNavigate('landing')}
             onNavigateToHome={() => handleNavigate('landing')}
             onNavigateHome={() => handleNavigate('landing')}
-            onAdminClick={() => handleNavigate('admin')}
           />
         ) : currentView === 'receipt-issuance' ? (
           isMerchantAuthenticated() ? (
@@ -295,7 +294,6 @@ function App() {
               onHomeClick={() => handleNavigate('landing')}
               onNavigateToHome={() => handleNavigate('landing')}
               onNavigateHome={() => handleNavigate('landing')}
-              onAdminClick={() => handleNavigate('admin')}
             />
           )
         ) : currentView === 'registration' ? (
@@ -316,7 +314,6 @@ function App() {
             onHomeClick={() => handleNavigate('landing')}
             onNavigateToHome={() => handleNavigate('landing')}
             onNavigateHome={() => handleNavigate('landing')}
-            onAdminClick={() => handleNavigate('admin')}
           />
         )}
       </ErrorBoundary>

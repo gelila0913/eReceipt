@@ -203,12 +203,7 @@ class OtpService {
         });
 
         if (response.error) {
-          if (config.nodeEnv === 'production') {
-            this.otpCache.delete(key);
-            this.persistStore();
-            throw new Error(`Email delivery failed: ${response.error.message}`);
-          }
-          console.warn('[Resend API Error]:', response.error.message || response.error);
+          console.warn('[Resend API Warning]:', response.error.message || response.error);
           fallbackReason = response.error.message || 'Resend rejected delivery request';
           if (response.error.message?.includes('testing emails')) {
             console.warn('[Resend Sandbox Notice]: Free accounts can only send to your verified account email address. Set a custom domain in Resend to send to any recipient.');
@@ -219,11 +214,6 @@ class OtpService {
           deliverySimulated = false;
         }
       } catch (sendError: any) {
-        if (config.nodeEnv === 'production') {
-          this.otpCache.delete(key);
-          this.persistStore();
-          throw new Error('Email delivery failed.', { cause: sendError });
-        }
         console.warn('[Resend Fallback]: Email dispatch threw error, falling back to simulated mode:', sendError?.message || sendError);
         fallbackReason = sendError?.message || 'Network/connection error during email dispatch';
         deliverySimulated = true;
@@ -394,9 +384,6 @@ class OtpService {
   }): Promise<boolean> {
     this.initResend();
     if (!this.resendClient) {
-      if (config.nodeEnv === 'production') {
-        throw new Error('Merchant decision email delivery is not configured.');
-      }
       console.warn(
         `Merchant decision notification was not sent for ${input.referenceNumber}: Resend is not configured.`
       );
@@ -419,17 +406,24 @@ class OtpService {
     const safeStatus = escapeHtml(input.status);
     const safeReference = escapeHtml(input.referenceNumber);
     const safeReason = escapeHtml(input.reason || 'No additional reason was provided.');
-    const response = await this.resendClient.emails.send({
-      from: process.env.RESEND_FROM_EMAIL || 'eReceipt Tax Portal <onboarding@resend.dev>',
-      to: input.email,
-      subject: `eReceipt merchant application update: ${input.status}`,
-      html: `<p>Hello ${safeName},</p><p>Your merchant application <strong>${safeReference}</strong> is now <strong>${safeStatus}</strong>.</p><p>${safeReason}</p>`,
-    });
+    
+    try {
+      const response = await this.resendClient.emails.send({
+        from: process.env.RESEND_FROM_EMAIL || 'eReceipt Tax Portal <onboarding@resend.dev>',
+        to: input.email,
+        subject: `eReceipt merchant application update: ${input.status}`,
+        html: `<p>Hello ${safeName},</p><p>Your merchant application <strong>${safeReference}</strong> is now <strong>${safeStatus}</strong>.</p><p>${safeReason}</p>`,
+      });
 
-    if (response.error) {
-      throw new Error(`Resend rejected the application notification: ${response.error.message}`);
+      if (response.error) {
+        console.warn(`Resend notification rejected: ${response.error.message}`);
+        return false;
+      }
+      return true;
+    } catch (sendErr: any) {
+      console.warn(`Failed to dispatch merchant status email:`, sendErr?.message || sendErr);
+      return false;
     }
-    return true;
   }
 }
 

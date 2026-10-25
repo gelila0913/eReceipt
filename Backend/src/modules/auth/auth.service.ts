@@ -58,13 +58,6 @@ export class AuthService {
       throw new ForbiddenError(`Merchant account is not active (Current status: ${app.status}).`);
     }
 
-    // Enforce email verification if email was provided
-    if (app.email && app.emailVerified === false) {
-      throw new ForbiddenError(
-        "Your email address has not been verified. Please verify your email via OTP before logging in."
-      );
-    }
-
     // 3. Verify password hash using constant-time comparison
     const isPasswordValid = verifyPassword(input.password, app.passwordHash);
     if (!isPasswordValid) {

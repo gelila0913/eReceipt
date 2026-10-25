@@ -1,0 +1,134 @@
+.bottomNavContainer {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(226, 232, 240, 0.9);
+  padding: 8px 10px max(env(safe-area-inset-bottom, 0px), 10px) 10px;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.06);
+  justify-content: space-around;
+  align-items: center;
+}
+
+@media (max-width: 768px) {
+  .bottomNavContainer {
+    display: flex;
+  }
+}
+
+.navItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  min-width: 54px;
+  color: #64748B;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.navItem:active {
+  transform: scale(0.92);
+}
+
+.iconWrapper {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin-bottom: 2px;
+}
+
+.navLabel {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1px;
+  color: inherit;
+  transition: color 0.18s ease;
+}
+
+.navItemActive {
+  color: #0b8060;
+}
+
+.navItemActive .navLabel {
+  color: #0b8060;
+  font-weight: 700;
+}
+
+.activeIndicator {
+  position: absolute;
+  top: -4px;
+  width: 14px;
+  height: 3px;
+  background-color: #0b8060;
+  border-radius: 9999px;
+  animation: indicatorPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes indicatorPop {
+  0% {
+    transform: scaleX(0.2);
+    opacity: 0;
+  }
+  100% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+
+/* Center Prominent Hero Button for "Issue Receipt" */
+.centerIssueWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  top: -12px;
+}
+
+.centerIssueButton {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0b8060 0%, #123D2C 100%);
+  color: #FFFFFF;
+  border: 4px solid #FFFFFF;
+  box-shadow: 0 6px 18px rgba(11, 128, 96, 0.42);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  -webkit-tap-highlight-color: transparent;
+  padding: 0;
+}
+
+.centerIssueButton:active {
+  transform: scale(0.92);
+  box-shadow: 0 2px 8px rgba(11, 128, 96, 0.35);
+}
+
+.centerIssueActive {
+  background: linear-gradient(135deg, #10B981 0%, #064E3B 100%);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.35), 0 6px 18px rgba(11, 128, 96, 0.5);
+}
+
+.centerIssueLabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: #123D2C;
+  margin-top: 2px;
+}

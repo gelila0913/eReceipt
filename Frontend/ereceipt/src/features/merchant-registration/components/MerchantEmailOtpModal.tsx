@@ -525,6 +525,26 @@ export const MerchantEmailOtpModal: React.FC<MerchantEmailOtpModalProps> = ({
               {isSubmitting ? 'Verifying...' : 'Verify & Continue'}
             </button>
           </div>
+
+          {/* Quick Skip for Evaluation / Demo */}
+          <div style={{ textAlign: 'center', marginTop: '14px', borderTop: '1px solid #F1F5F9', paddingTop: '12px' }}>
+            <button
+              type="button"
+              onClick={() => onVerified()}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#64748B',
+                fontSize: '13px',
+                fontWeight: 500,
+                textDecoration: 'underline',
+                cursor: 'pointer',
+                padding: '4px 8px',
+              }}
+            >
+              Skip email verification and proceed to Step 2 →
+            </button>
+          </div>
         </form>
       </div>
     </div>

@@ -33,7 +33,6 @@ export interface SigninFormProps {
   onNavigateToHome?: () => void;
   onNavigateHome?: () => void;
   onHomeClick?: () => void;
-  onAdminClick?: () => void;
 }
 
 export type LoginFormProps = SigninFormProps;
@@ -46,7 +45,6 @@ export const LoginForm: React.FC<SigninFormProps> = ({
   onNavigateToHome,
   onNavigateHome,
   onHomeClick,
-  onAdminClick,
 }) => {
   const handleRegister = onNavigateToRegister || onRegisterClick;
   const handleHome = onNavigateToHome || onNavigateHome || onHomeClick;
@@ -427,27 +425,6 @@ export const LoginForm: React.FC<SigninFormProps> = ({
               }}
             >
               Create an account
-            </button>
-          </div>
-
-          {/* Revenue Authority Officer Link */}
-          <div style={{ marginTop: '14px', textAlign: 'center', fontSize: '13px', color: '#526059' }}>
-            <span>Revenue Authority Officer? </span>
-            <button
-              type="button"
-              onClick={onAdminClick ? onAdminClick : () => { window.location.href = '/?view=admin'; }}
-              style={{
-                background: 'none',
-                border: 'none',
-                padding: 0,
-                color: '#123D2C',
-                fontWeight: 600,
-                cursor: 'pointer',
-                font: 'inherit',
-                textDecoration: 'underline',
-              }}
-            >
-              Sign in to Admin Portal
             </button>
           </div>
 

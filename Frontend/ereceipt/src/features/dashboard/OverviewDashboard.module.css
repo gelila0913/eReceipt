@@ -37,23 +37,36 @@
 }
 
 @media (max-width: 640px) {
+  .heading {
+    font-size: 24px;
+    letter-spacing: -0.4px;
+  }
+  .subheading {
+    margin: 0 0 20px 0;
+  }
   .cardsGrid {
     grid-template-columns: 1fr;
+    gap: 16px;
   }
 }
 
 .card {
   border-radius: 16px;
-  padding: 24px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  min-height: 200px;
+  min-height: 180px;
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   position: relative;
   text-align: left;
   border: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.card:active {
+  transform: scale(0.98);
 }
 
 .card:hover {

@@ -1,12 +1,15 @@
 .layoutContainer {
   min-height: 100vh;
   background-color: var(--color-bg-body, #F7F5EF);
+  display: flex;
+  flex-direction: column;
 }
 
 .mainWrapper {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  flex: 1;
 }
 
 @media (min-width: 1024px) {
@@ -15,21 +18,32 @@
   }
 }
 
+.desktopTopbar {
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .desktopTopbar {
+    display: none;
+  }
+}
+
 .contentArea {
   width: 100%;
   max-width: 1440px;
   margin: 0 auto;
-  padding: 16px;
+  padding: 14px 12px 96px 12px;
   flex: 1;
+  box-sizing: border-box;
 }
 
 @media (min-width: 640px) {
   .contentArea {
-    padding: 24px;
+    padding: 20px 20px 96px 20px;
   }
 }
 
-@media (min-width: 768px) {
+@media (min-width: 769px) {
   .contentArea {
     padding: 28px;
   }
