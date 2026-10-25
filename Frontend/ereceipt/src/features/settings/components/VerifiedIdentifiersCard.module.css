@@ -161,3 +161,19 @@
   color: var(--color-text-muted, #64748b);
   flex-shrink: 0;
 }
+
+@media (max-width: 640px) {
+  .card {
+    padding: 16px;
+    gap: 14px;
+  }
+  .grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .maskedValue {
+    font-size: 13px;
+    word-break: break-all;
+  }
+}
+

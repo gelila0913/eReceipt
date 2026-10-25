@@ -13,7 +13,7 @@ const INITIAL_APPLICATIONS: StoredMerchantApplication[] = [
     id: "app-1792846271951",
     referenceNumber: "APP-2026-65A2827E3DBA",
     submissionDate: "25 Oct 2026",
-    status: "Pending",
+    status: "Approved",
     fullName: "Fanuel Goitom Kesete",
     phoneNumber: "+251939044079",
     email: "fanuelgoitom79@gmail.com",
@@ -32,6 +32,9 @@ const INITIAL_APPLICATIONS: StoredMerchantApplication[] = [
     floor: "2",
     gpsLocation: "8.992834, 38.805159",
     certified: true,
+    reviewedBy: "Fanuel Kassahun · RO-305",
+    reviewNotes: "All documents accredited and approved for electronic receipting.",
+    reviewedAt: "2026-10-25T02:00:00.000Z",
     createdAt: "2026-10-25T02:00:00.000Z",
     updatedAt: "2026-10-25T02:00:00.000Z"
   },

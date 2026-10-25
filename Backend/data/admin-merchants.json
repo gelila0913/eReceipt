@@ -1,0 +1,44 @@
+[
+  {
+    "id": "MER-54321",
+    "name": "Fani PLC",
+    "tin": "0987654321",
+    "category": "Retail",
+    "classification": "VAT",
+    "status": "Active",
+    "authorization": "Authorized",
+    "registeredDate": "24 Oct 2026",
+    "address": "AA, Bole, MM, 2",
+    "contactPhone": "+251939044079",
+    "vatRegistrationNumber": "VAT-ET-2026-4321",
+    "monthlySalesAvg": 0
+  },
+  {
+    "id": "MER-94994",
+    "name": "FANIPLC",
+    "tin": "3239494994",
+    "category": "Retail",
+    "classification": "VAT",
+    "status": "Active",
+    "authorization": "Authorized",
+    "registeredDate": "23 Oct 2026",
+    "address": "Adiss, 4 kilo, Morning",
+    "contactPhone": "0987654432",
+    "vatRegistrationNumber": "VAT-ET-2026-4994",
+    "monthlySalesAvg": 0
+  },
+  {
+    "id": "MER-76655",
+    "name": "Kidus Tech Solutions PLC",
+    "tin": "0088776655",
+    "category": "Electronics",
+    "classification": "VAT",
+    "status": "Active",
+    "authorization": "Authorized",
+    "registeredDate": "22 Oct 2026",
+    "address": "Addis Ababa, Bole, Morning Star Mall",
+    "contactPhone": "+251911998877",
+    "vatRegistrationNumber": "VAT-ET-2026-6655",
+    "monthlySalesAvg": 0
+  }
+]

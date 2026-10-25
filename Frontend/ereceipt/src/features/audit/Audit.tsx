@@ -213,20 +213,12 @@ export const Audit: React.FC<AuditProps> = ({ initialScreen = 'dashboard', onNav
             </div>
           </div>
 
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '240px 1fr',
-              gap: '32px',
-              marginTop: '20px',
-              alignItems: 'flex-start',
-            }}
-          >
-            <aside style={{ position: 'sticky', top: '24px' }}>
+          <div className={styles.settingsGrid}>
+            <aside className={styles.settingsAside}>
               <SettingsVerticalNav activeTab={settingsTab} onTabChange={handleSettingsTabChange} />
             </aside>
 
-            <div style={{ minWidth: 0 }}>
+            <div className={styles.settingsMain}>
               {settingsTab === 'profile' && <BusinessProfileTab />}
               {settingsTab === 'preferences' && (
                 <div

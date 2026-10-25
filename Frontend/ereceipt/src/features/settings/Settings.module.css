@@ -44,8 +44,16 @@
 }
 
 @media (max-width: 860px) {
+  .container {
+    padding: 16px 16px 80px 16px;
+  }
   .contentGrid {
     grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .navColumn {
+    position: static;
+    width: 100%;
   }
 }
 

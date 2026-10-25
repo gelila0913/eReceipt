@@ -159,7 +159,7 @@ class OtpService {
     this.initResend(); // Re-read if key was updated in environment
 
     if (this.resendClient) {
-      const fromEmail = process.env.RESEND_FROM_EMAIL || 'eReceipt <onboarding@resend.dev>';
+      const fromEmail = process.env.RESEND_FROM_EMAIL || 'eReceipt <notifications@merihcare.live>';
       const subject = `eReceipt · Verification Code: ${code}`;
 
       const html = `
@@ -192,7 +192,6 @@ class OtpService {
       `;
 
       try {
-
         const response = await this.resendClient.emails.send({
           from: fromEmail,
           to: cleanEmail,
@@ -201,51 +200,15 @@ class OtpService {
         });
 
         if (response.error) {
-          console.warn('[Resend API Error]:', response.error.message || response.error);
-          const errMsg = response.error.message || '';
-          if (
-            (errMsg.includes('only send testing emails') || errMsg.includes('verify a domain')) &&
-            cleanEmail !== 'fanuelgoitom79@gmail.com'
-          ) {
-            console.log(`[Resend Trial Forward]: Forwarding OTP to verified account owner fanuelgoitom79@gmail.com (intended for: ${cleanEmail})`);
-            const fallback = await this.resendClient.emails.send({
-              from: fromEmail,
-              to: 'fanuelgoitom79@gmail.com',
-              subject: `[Dev Forward · Intended for ${cleanEmail}] ${subject}`,
-              html: `<div style="padding:10px;background:#FEF3C7;border:1px solid #F59E0B;border-radius:6px;margin-bottom:16px;font-size:13px;color:#92400E;"><strong>Resend Testing Mode:</strong> This email was originally addressed to <code>${cleanEmail}</code>.</div>` + html,
-            });
-            if (fallback.error) {
-              throw new Error(fallback.error.message || 'Failed to dispatch verification email via Resend.');
-            }
-          } else {
-            throw new Error(response.error.message || 'Failed to dispatch verification email via Resend.');
-          }
+          console.error('[Resend API Error]:', response.error.message || response.error);
+          throw new Error(response.error.message || 'Failed to dispatch verification email via Resend.');
         } else {
           console.log(`✓ [Resend Email Sent]: Message ID ${response.data?.id} to ${cleanEmail}`);
         }
       } catch (sendError: any) {
         const msg = sendError?.message || '';
-        if (
-          (msg.includes('only send testing emails') || msg.includes('verify a domain')) &&
-          cleanEmail !== 'fanuelgoitom79@gmail.com' &&
-          this.resendClient
-        ) {
-          try {
-            console.log(`[Resend Trial Catch Forward]: Forwarding OTP to fanuelgoitom79@gmail.com`);
-            await this.resendClient.emails.send({
-              from: fromEmail,
-              to: 'fanuelgoitom79@gmail.com',
-              subject: `[Dev Forward · Intended for ${cleanEmail}] ${subject}`,
-              html: `<div style="padding:10px;background:#FEF3C7;border:1px solid #F59E0B;border-radius:6px;margin-bottom:16px;font-size:13px;color:#92400E;"><strong>Resend Testing Mode:</strong> This email was originally addressed to <code>${cleanEmail}</code>.</div>` + html,
-            });
-          } catch (fErr) {
-            console.error('[Resend Error]: Forwarding also threw error:', fErr);
-            throw new Error(msg || 'Failed to dispatch verification email. Please try again.');
-          }
-        } else {
-          console.error('[Resend Error]: Email dispatch threw error:', msg || sendError);
-          throw new Error(msg || 'Failed to dispatch verification email. Please try again.');
-        }
+        console.error('[Resend Error]: Email dispatch threw error:', msg || sendError);
+        throw new Error(msg || 'Failed to dispatch verification email. Please try again.');
       }
     } else {
       throw new Error('Resend email service client could not be initialized.');

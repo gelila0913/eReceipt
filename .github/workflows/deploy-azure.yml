@@ -98,7 +98,7 @@ jobs:
             --name backend \
             --resource-group rg-ereceipt-prod \
             --image acrereceipt23993.azurecr.io/ereceipt-backend:${{ steps.vars.outputs.SHA_TAG }} \
-            --set-env-vars "RESEND_API_KEY=$RESEND_KEY" "RESEND_FROM_EMAIL=eReceipt <onboarding@resend.dev>"
+            --set-env-vars "RESEND_API_KEY=$RESEND_KEY" "RESEND_FROM_EMAIL=eReceipt <notifications@merihcare.live>"
 
           echo "Updating live Frontend container..."
           az containerapp update \

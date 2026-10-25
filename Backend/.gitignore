@@ -1,6 +1,7 @@
 data/*
 !data/merchant-applications.json
 !data/admin-officers.json
+!data/admin-merchants.json
 !data/.gitkeep
 node_modules/
 dist/

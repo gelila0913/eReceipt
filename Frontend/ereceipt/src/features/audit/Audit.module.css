@@ -36,3 +36,35 @@
   color: var(--color-text-secondary, #526059);
   margin-top: 6px;
 }
+
+.settingsGrid {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 32px;
+  margin-top: 20px;
+  align-items: flex-start;
+}
+
+.settingsAside {
+  position: sticky;
+  top: 24px;
+}
+
+.settingsMain {
+  min-width: 0;
+  width: 100%;
+}
+
+@media (max-width: 860px) {
+  .settingsGrid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .settingsAside {
+    position: static;
+    width: 100%;
+    margin-bottom: 8px;
+  }
+}
+
