@@ -4,3 +4,5 @@ Digital Receipt System/
 **/.env
 node_modules/
 dist/
+*.apk
+*.zip
