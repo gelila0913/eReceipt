@@ -221,52 +221,25 @@ export const Audit: React.FC<AuditProps> = ({ initialScreen = 'dashboard', onNav
             <div className={styles.settingsMain}>
               {settingsTab === 'profile' && <BusinessProfileTab />}
               {settingsTab === 'preferences' && (
-                <div
-                  style={{
-                    backgroundColor: '#FFFFFF',
-                    border: '1px solid #DDE3DE',
-                    borderRadius: '12px',
-                    padding: '32px',
-                  }}
-                >
-                  <h2 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: 700, color: '#17201B' }}>
-                    System Preferences
-                  </h2>
-                  <p style={{ margin: 0, fontSize: '14px', color: '#526059' }}>
+                <div className={styles.placeholderCard}>
+                  <h2 className={styles.placeholderCardTitle}>System Preferences</h2>
+                  <p className={styles.placeholderCardCopy}>
                     Configure default currency (ETB), fiscal calendar, and language preferences.
                   </p>
                 </div>
               )}
               {settingsTab === 'notifications' && (
-                <div
-                  style={{
-                    backgroundColor: '#FFFFFF',
-                    border: '1px solid #DDE3DE',
-                    borderRadius: '12px',
-                    padding: '32px',
-                  }}
-                >
-                  <h2 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: 700, color: '#17201B' }}>
-                    Compliance Notifications
-                  </h2>
-                  <p style={{ margin: 0, fontSize: '14px', color: '#526059' }}>
+                <div className={styles.placeholderCard}>
+                  <h2 className={styles.placeholderCardTitle}>Compliance Notifications</h2>
+                  <p className={styles.placeholderCardCopy}>
                     Manage SMS and Email alerts for tax report deadlines and receipt clearances.
                   </p>
                 </div>
               )}
               {settingsTab === 'security' && (
-                <div
-                  style={{
-                    backgroundColor: '#FFFFFF',
-                    border: '1px solid #DDE3DE',
-                    borderRadius: '12px',
-                    padding: '32px',
-                  }}
-                >
-                  <h2 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: 700, color: '#17201B' }}>
-                    Security & API Keys
-                  </h2>
-                  <p style={{ margin: 0, fontSize: '14px', color: '#526059' }}>
+                <div className={styles.placeholderCard}>
+                  <h2 className={styles.placeholderCardTitle}>Security & API Keys</h2>
+                  <p className={styles.placeholderCardCopy}>
                     Manage Ministry of Revenue EIMS clearance credentials and digital signature keys.
                   </p>
                 </div>

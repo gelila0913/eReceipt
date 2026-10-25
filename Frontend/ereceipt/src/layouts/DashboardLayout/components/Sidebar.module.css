@@ -28,6 +28,14 @@
   transform: translateX(-100%);
 }
 
+@media (max-width: 1023px) {
+  .closed {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+}
+
 .backdrop {
   position: fixed;
   inset: 0;
