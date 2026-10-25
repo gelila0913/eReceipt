@@ -59,13 +59,29 @@ export const MerchantReview: React.FC<MerchantReviewProps> = ({
 
   const fetchApplicationDocument = async (): Promise<Blob> => {
     const token = localStorage.getItem('officer_token');
-    const response = await fetch(documentDownloadUrl, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
-    if (!response.ok) {
-      throw new Error(`Unable to retrieve document (${response.status}).`);
+    try {
+      const response = await fetch(documentDownloadUrl, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (response.ok) {
+        return await response.blob();
+      }
+    } catch (err) {
+      console.warn('Network request for document encountered error:', err);
     }
-    return response.blob();
+
+    // Client-side cache fallback: If user uploaded or tested in this browser session
+    const cachedData =
+      localStorage.getItem(`ereceipt_doc_${application.ref}`) ||
+      localStorage.getItem('ereceipt:last_uploaded_doc_data');
+    if (cachedData) {
+      try {
+        const res = await fetch(cachedData);
+        return await res.blob();
+      } catch {}
+    }
+
+    throw new Error('Unable to retrieve document from server.');
   };
 
   const closePreview = () => {
@@ -490,11 +506,21 @@ export const MerchantReview: React.FC<MerchantReviewProps> = ({
               </div>
             </div>
             <div className={styles.docModalBody}>
-              <iframe
-                src={activePreviewDoc.url}
-                title="Document Preview"
-                style={{ width: '100%', height: '540px', border: 'none' }}
-              />
+              {activePreviewDoc.name.match(/\.(jpg|jpeg|png|webp)$/i) ? (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px', backgroundColor: '#F8FAFC', padding: '16px' }}>
+                  <img
+                    src={activePreviewDoc.url}
+                    alt={activePreviewDoc.name}
+                    style={{ maxWidth: '100%', maxHeight: '520px', objectFit: 'contain', borderRadius: '4px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
+                  />
+                </div>
+              ) : (
+                <iframe
+                  src={activePreviewDoc.url}
+                  title="Document Preview"
+                  style={{ width: '100%', height: '540px', border: 'none' }}
+                />
+              )}
             </div>
           </div>
         </div>

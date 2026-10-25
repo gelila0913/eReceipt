@@ -217,6 +217,13 @@ export const MerchantRegistration: React.FC<MerchantRegistrationProps> = ({
     window.localStorage.setItem('ereceipt_merchant', JSON.stringify(registeredSession));
     window.localStorage.setItem('merchant_user', JSON.stringify(registeredSession));
 
+    try {
+      const lastDoc = window.localStorage.getItem('ereceipt:last_uploaded_doc_data');
+      if (lastDoc && assignedRef) {
+        window.localStorage.setItem(`ereceipt_doc_${assignedRef}`, lastDoc);
+      }
+    } catch {}
+
     setSubmittedRef(assignedRef);
     setIsSubmitted(true);
     setIsSubmitting(false);

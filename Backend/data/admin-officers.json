@@ -1,0 +1,57 @@
+[
+  {
+    "id": "off-demo-101",
+    "username": "officer.demo",
+    "passwordHash": "Revenue123",
+    "name": "Abebe Bikila",
+    "badgeNumber": "RO-101",
+    "role": "REVENUE_OFFICER",
+    "email": "officer.demo@mor.gov.et",
+    "branch": "Addis Ababa Large Taxpayers Branch",
+    "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+    "id": "off-1792695191459",
+    "username": "officer.fani",
+    "passwordHash": "Password123",
+    "name": "Fanuel Kassahun",
+    "badgeNumber": "RO-305",
+    "role": "REVENUE_OFFICER",
+    "email": "fanuelgoitom79@gmail.com",
+    "branch": "Addis Ababa Large Taxpayers Branch",
+    "createdAt": "2026-10-22T18:53:11.459Z"
+  },
+  {
+    "id": "off-admin-001",
+    "username": "admin",
+    "passwordHash": "Admin123",
+    "name": "Revenue System Administrator",
+    "badgeNumber": "ADM-001",
+    "role": "ADMIN",
+    "email": "admin@mor.gov.et",
+    "branch": "Ministry of Revenues Head Office",
+    "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+    "id": "off-1792701819420",
+    "username": "Goitom",
+    "passwordHash": "Fani1234",
+    "name": "Fanuel",
+    "badgeNumber": "4433",
+    "role": "REVENUE_OFFICER",
+    "email": "fanuelgoitom79@gmail.com",
+    "branch": "Addis Ababa Large Taxpayers Branch",
+    "createdAt": "2026-10-22T20:43:39.420Z"
+  },
+  {
+    "id": "off-1792746457785",
+    "username": "fanuelgoitom79@gmail.com",
+    "passwordHash": "Fani1234",
+    "name": "Fanuel Goitom",
+    "badgeNumber": "1123",
+    "role": "REVENUE_OFFICER",
+    "email": "fanuelgoitom79@gmail.com",
+    "branch": "Addis Ababa Large Taxpayers Branch",
+    "createdAt": "2026-10-23T09:07:37.785Z"
+  }
+]

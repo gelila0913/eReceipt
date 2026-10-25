@@ -59,6 +59,8 @@ export interface StoredMerchantApplication {
   documentPath?: string;
   uploadedFileName?: string;
   uploadedFileSize?: string;
+  documentBase64?: string;
+  documentMimeType?: string;
 
   // Location
   city: string;

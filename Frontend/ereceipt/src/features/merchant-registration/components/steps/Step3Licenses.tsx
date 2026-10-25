@@ -22,6 +22,19 @@ export const Step3Licenses: React.FC<Step3Props> = ({ formData, onChange }) => {
       isDocumentReady: true,
       documentFile: file,
     });
+
+    try {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          try {
+            localStorage.setItem('ereceipt:last_uploaded_doc_data', reader.result);
+            localStorage.setItem('ereceipt:last_uploaded_doc_name', file.name);
+          } catch {}
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch {}
   };
 
   const handleDragOver = (e: React.DragEvent) => {

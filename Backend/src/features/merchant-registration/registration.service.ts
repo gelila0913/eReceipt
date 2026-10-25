@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import fs from 'node:fs';
 import { applicationStorage } from './storage.js';
 import { hashPassword } from '../../common/auth/security.js';
 import { otpService } from '../../services/otp.service.js';
@@ -111,6 +112,18 @@ export class MerchantRegistrationService {
       year: 'numeric',
     });
 
+    let documentBase64: string | undefined;
+    let documentMimeType: string | undefined;
+    if (uploadedFile?.path && fs.existsSync(uploadedFile.path)) {
+      try {
+        const fileBuffer = fs.readFileSync(uploadedFile.path);
+        documentBase64 = fileBuffer.toString('base64');
+        documentMimeType = uploadedFile.mimetype || 'application/pdf';
+      } catch (readErr) {
+        console.warn('Failed to encode uploaded file to base64:', readErr);
+      }
+    }
+
     const newApplication: StoredMerchantApplication = {
       id: `app-${Date.now()}`,
       referenceNumber: ref,
@@ -130,6 +143,8 @@ export class MerchantRegistrationService {
         ? `${(uploadedFile.size / (1024 * 1024)).toFixed(1)} MB`
         : input.uploadedFileSize,
       documentPath: uploadedFile ? uploadedFile.path : undefined,
+      documentBase64,
+      documentMimeType,
       city: input.city.trim(),
       subCity: input.subCity.trim(),
       buildingName: input.buildingName.trim(),
