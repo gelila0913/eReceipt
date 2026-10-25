@@ -1,0 +1,71 @@
+name: Build Android APK (Merchant App)
+
+on:
+  push:
+    branches:
+      - main
+      - Fani
+    paths:
+      - 'Frontend/ereceipt/**'
+      - '.github/workflows/build-apk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-apk:
+    name: Compile Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: 'Frontend/ereceipt/package-lock.json'
+
+      - name: Install Frontend Dependencies & Build Web Assets
+        working-directory: Frontend/ereceipt
+        env:
+          VITE_API_BASE_URL: https://backend.salmonwater-89ba5a67.southafricanorth.azurecontainerapps.io
+        run: |
+          npm ci
+          npm run build
+          npx cap sync android
+
+      - name: Prepare Gradle Wrapper
+        working-directory: Frontend/ereceipt/android
+        run: |
+          sed -i 's/\r$//' gradlew
+          chmod +x gradlew
+
+      - name: Build Debug APK with Gradle
+        working-directory: Frontend/ereceipt/android
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Rename APK for Distribution
+        working-directory: Frontend/ereceipt/android/app/build/outputs/apk/debug
+        run: |
+          cp app-debug.apk eReceipt-Merchant.apk
+
+      - name: Upload Merchant APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: eReceipt-Merchant-APK
+          path: Frontend/ereceipt/android/app/build/outputs/apk/debug/eReceipt-Merchant.apk
+          if-no-files-found: error
+          retention-days: 30
